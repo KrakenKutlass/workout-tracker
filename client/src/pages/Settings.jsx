@@ -238,7 +238,7 @@ export default function Settings() {
                 className="input"
                 value={form.phone}
                 onChange={e => setForm(prev => ({ ...prev, phone: e.target.value }))}
-                placeholder="+447932332111"
+                placeholder="+44xxxxxxxxxx"
               />
             </div>
           </div>
