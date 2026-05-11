@@ -1,22 +1,31 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
+const supabase = require('../supabase');
 const { getWorkoutMeta, getPhase, WORKOUT_ROTATION } = require('../workoutData');
 
-function getCompletedCount(userId) {
-  return db.prepare(
-    "SELECT COUNT(*) as count FROM workout_logs WHERE user_id = ? AND status = 'completed'"
-  ).get(userId).count;
+async function getCompletedCount(userId) {
+  const { count, error } = await supabase
+    .from('workout_logs')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('status', 'completed');
+  if (error) throw new Error(error.message);
+  return count || 0;
 }
 
 // GET /api/workouts/today - get today's workout info
-router.get('/today', (req, res) => {
+router.get('/today', async (req, res) => {
   try {
-    const user = db.prepare('SELECT * FROM users WHERE id = 1').get();
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', 1)
+      .single();
+    if (userError) throw new Error(userError.message);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const today = new Date().toISOString().split('T')[0];
-    const completedCount = getCompletedCount(user.id);
+    const completedCount = await getCompletedCount(user.id);
 
     if (completedCount >= 84) {
       return res.json({
@@ -29,20 +38,38 @@ router.get('/today', (req, res) => {
     const programDay = completedCount + 1;
     const workoutType = WORKOUT_ROTATION[completedCount % 7];
     const weekNumber = Math.floor(completedCount / 7) + 1;
-    const workoutMeta = getWorkoutMeta(workoutType, weekNumber, user.injury_mode === 1);
+    const workoutMeta = getWorkoutMeta(workoutType, weekNumber, user.injury_mode === true);
 
     // Get or create today's log
-    let log = db.prepare('SELECT * FROM workout_logs WHERE user_id = 1 AND date = ?').get(today);
+    let { data: log, error: logError } = await supabase
+      .from('workout_logs')
+      .select('*')
+      .eq('user_id', 1)
+      .eq('date', today)
+      .maybeSingle();
+    if (logError) throw new Error(logError.message);
 
     if (!log) {
-      db.prepare(
-        "INSERT OR IGNORE INTO workout_logs (user_id, date, workout_type, status, completed_exercises) VALUES (1, ?, ?, 'not_started', '[]')"
-      ).run(today, workoutType);
-      log = db.prepare('SELECT * FROM workout_logs WHERE user_id = 1 AND date = ?').get(today);
+      const { error: insertError } = await supabase
+        .from('workout_logs')
+        .upsert(
+          { user_id: 1, date: today, workout_type: workoutType, status: 'not_started', completed_exercises: [] },
+          { onConflict: 'user_id,date' }
+        );
+      if (insertError) throw new Error(insertError.message);
+
+      const { data: newLog, error: newLogError } = await supabase
+        .from('workout_logs')
+        .select('*')
+        .eq('user_id', 1)
+        .eq('date', today)
+        .single();
+      if (newLogError) throw new Error(newLogError.message);
+      log = newLog;
     }
 
     // Calculate streak
-    const streak = calculateStreak(user.id, today);
+    const streak = await calculateStreak(user.id, today);
 
     res.json({
       today,
@@ -53,11 +80,11 @@ router.get('/today', (req, res) => {
       workout: workoutMeta,
       log: {
         ...log,
-        completed_exercises: JSON.parse(log.completed_exercises || '[]'),
-        stats: JSON.parse(log.stats || '{}'),
+        completed_exercises: log.completed_exercises || [],
+        stats: log.stats || {},
       },
       streak,
-      injuryMode: user.injury_mode === 1,
+      injuryMode: user.injury_mode === true,
     });
   } catch (err) {
     console.error(err);
@@ -66,23 +93,37 @@ router.get('/today', (req, res) => {
 });
 
 // GET /api/workouts/progress - get 12-week progress grid
-router.get('/progress', (req, res) => {
+router.get('/progress', async (req, res) => {
   try {
-    const user = db.prepare('SELECT * FROM users WHERE id = 1').get();
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', 1)
+      .single();
+    if (userError) throw new Error(userError.message);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const today = new Date().toISOString().split('T')[0];
-    const completedCount = getCompletedCount(user.id);
+    const completedCount = await getCompletedCount(user.id);
 
     // Get completed logs ordered by date
-    const completedLogs = db.prepare(
-      "SELECT * FROM workout_logs WHERE user_id = 1 AND status = 'completed' ORDER BY date ASC"
-    ).all();
+    const { data: completedLogs, error: logsError } = await supabase
+      .from('workout_logs')
+      .select('*')
+      .eq('user_id', 1)
+      .eq('status', 'completed')
+      .order('date', { ascending: true });
+    if (logsError) throw new Error(logsError.message);
 
     // Check for in_progress log today
-    const inProgressLog = db.prepare(
-      "SELECT * FROM workout_logs WHERE user_id = 1 AND date = ? AND status = 'in_progress'"
-    ).get(today);
+    const { data: inProgressLog, error: inProgressError } = await supabase
+      .from('workout_logs')
+      .select('*')
+      .eq('user_id', 1)
+      .eq('date', today)
+      .eq('status', 'in_progress')
+      .maybeSingle();
+    if (inProgressError) throw new Error(inProgressError.message);
 
     // Build 84-slot grid (completion-based, not calendar-based)
     const grid = [];
@@ -130,7 +171,7 @@ router.get('/progress', (req, res) => {
       }
     }
 
-    const streak = calculateStreak(user.id, today);
+    const streak = await calculateStreak(user.id, today);
 
     res.json({
       grid,
@@ -148,36 +189,52 @@ router.get('/progress', (req, res) => {
 });
 
 // GET /api/workouts/:date - get workout for a specific date
-router.get('/:date', (req, res) => {
+router.get('/:date', async (req, res) => {
   try {
     const { date } = req.params;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
     }
 
-    const user = db.prepare('SELECT * FROM users WHERE id = 1').get();
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', 1)
+      .single();
+    if (userError) throw new Error(userError.message);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     // Find the log for this date
-    const log = db.prepare('SELECT * FROM workout_logs WHERE user_id = 1 AND date = ?').get(date);
+    const { data: log, error: logError } = await supabase
+      .from('workout_logs')
+      .select('*')
+      .eq('user_id', 1)
+      .eq('date', date)
+      .maybeSingle();
+    if (logError) throw new Error(logError.message);
 
     if (!log) {
       return res.status(404).json({ error: 'No workout log found for this date' });
     }
 
     // Get completion-based position of this log
-    const completedLogs = db.prepare(
-      "SELECT * FROM workout_logs WHERE user_id = 1 AND status = 'completed' ORDER BY date ASC"
-    ).all();
+    const { data: completedLogs, error: completedLogsError } = await supabase
+      .from('workout_logs')
+      .select('*')
+      .eq('user_id', 1)
+      .eq('status', 'completed')
+      .order('date', { ascending: true });
+    if (completedLogsError) throw new Error(completedLogsError.message);
+
     const logIndex = completedLogs.findIndex(l => l.date === date);
 
     // Determine day index: if completed, use its position; else use completedCount
-    const completedCount = getCompletedCount(user.id);
+    const completedCount = await getCompletedCount(user.id);
     const dayIndex = logIndex >= 0 ? logIndex : completedCount;
 
     const weekNumber = Math.min(Math.floor(dayIndex / 7) + 1, 12);
     const workoutType = log.workout_type;
-    const workoutMeta = getWorkoutMeta(workoutType, weekNumber, user.injury_mode === 1);
+    const workoutMeta = getWorkoutMeta(workoutType, weekNumber, user.injury_mode === true);
 
     res.json({
       date,
@@ -187,8 +244,8 @@ router.get('/:date', (req, res) => {
       workout: workoutMeta,
       log: {
         ...log,
-        completed_exercises: JSON.parse(log.completed_exercises || '[]'),
-        stats: JSON.parse(log.stats || '{}'),
+        completed_exercises: log.completed_exercises || [],
+        stats: log.stats || {},
       },
     });
   } catch (err) {
@@ -198,7 +255,7 @@ router.get('/:date', (req, res) => {
 });
 
 // POST /api/workouts/log - create or update a workout log
-router.post('/log', (req, res) => {
+router.post('/log', async (req, res) => {
   try {
     const { date, workout_type, status, completed_exercises, notes } = req.body;
 
@@ -211,29 +268,33 @@ router.post('/log', (req, res) => {
       return res.status(400).json({ error: 'status must be not_started, in_progress, or completed' });
     }
 
-    const completedExercisesStr = JSON.stringify(completed_exercises || []);
+    const { error: upsertError } = await supabase
+      .from('workout_logs')
+      .upsert(
+        {
+          user_id: 1,
+          date,
+          workout_type,
+          status,
+          completed_exercises: completed_exercises || [],
+          notes: notes || null,
+        },
+        { onConflict: 'user_id,date' }
+      );
+    if (upsertError) throw new Error(upsertError.message);
 
-    const existing = db.prepare('SELECT id FROM workout_logs WHERE user_id = 1 AND date = ?').get(date);
+    const { data: log, error: logError } = await supabase
+      .from('workout_logs')
+      .select('*')
+      .eq('user_id', 1)
+      .eq('date', date)
+      .single();
+    if (logError) throw new Error(logError.message);
 
-    if (existing) {
-      db.prepare(`
-        UPDATE workout_logs
-        SET workout_type = ?, status = ?, completed_exercises = ?, notes = ?,
-            updated_at = datetime('now')
-        WHERE user_id = 1 AND date = ?
-      `).run(workout_type, status, completedExercisesStr, notes || null, date);
-    } else {
-      db.prepare(`
-        INSERT INTO workout_logs (user_id, date, workout_type, status, completed_exercises, notes)
-        VALUES (1, ?, ?, ?, ?, ?)
-      `).run(date, workout_type, status, completedExercisesStr, notes || null);
-    }
-
-    const log = db.prepare('SELECT * FROM workout_logs WHERE user_id = 1 AND date = ?').get(date);
     res.json({
       ...log,
-      completed_exercises: JSON.parse(log.completed_exercises || '[]'),
-      stats: JSON.parse(log.stats || '{}'),
+      completed_exercises: log.completed_exercises || [],
+      stats: log.stats || {},
     });
   } catch (err) {
     console.error(err);
@@ -242,7 +303,7 @@ router.post('/log', (req, res) => {
 });
 
 // POST /api/workouts/complete/:date - mark a workout as complete with stats
-router.post('/complete/:date', (req, res) => {
+router.post('/complete/:date', async (req, res) => {
   try {
     const { date } = req.params;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
@@ -250,30 +311,59 @@ router.post('/complete/:date', (req, res) => {
     }
 
     const { heart_rate_peak, heart_rate_avg, rpe, duration_minutes, notes } = req.body;
-    const stats = JSON.stringify({ heart_rate_peak, heart_rate_avg, rpe, duration_minutes, notes });
+    const stats = { heart_rate_peak, heart_rate_avg, rpe, duration_minutes, notes };
 
-    let log = db.prepare('SELECT * FROM workout_logs WHERE user_id = 1 AND date = ?').get(date);
+    const { data: existingLog, error: existingError } = await supabase
+      .from('workout_logs')
+      .select('*')
+      .eq('user_id', 1)
+      .eq('date', date)
+      .maybeSingle();
+    if (existingError) throw new Error(existingError.message);
 
-    if (!log) {
-      const user = db.prepare('SELECT * FROM users WHERE id = 1').get();
-      const completedCount = getCompletedCount(user.id);
+    if (!existingLog) {
+      const { data: user, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', 1)
+        .single();
+      if (userError) throw new Error(userError.message);
+
+      const completedCount = await getCompletedCount(user.id);
       const workoutType = WORKOUT_ROTATION[completedCount % 7];
-      db.prepare(
-        "INSERT INTO workout_logs (user_id, date, workout_type, status, completed_exercises, stats) VALUES (1, ?, ?, 'completed', '[]', ?)"
-      ).run(date, workoutType, stats);
+
+      const { error: insertError } = await supabase
+        .from('workout_logs')
+        .insert({
+          user_id: 1,
+          date,
+          workout_type: workoutType,
+          status: 'completed',
+          completed_exercises: [],
+          stats,
+        });
+      if (insertError) throw new Error(insertError.message);
     } else {
-      db.prepare(`
-        UPDATE workout_logs
-        SET status = 'completed', stats = ?, updated_at = datetime('now')
-        WHERE user_id = 1 AND date = ?
-      `).run(stats, date);
+      const { error: updateError } = await supabase
+        .from('workout_logs')
+        .update({ status: 'completed', stats })
+        .eq('user_id', 1)
+        .eq('date', date);
+      if (updateError) throw new Error(updateError.message);
     }
 
-    const updated = db.prepare('SELECT * FROM workout_logs WHERE user_id = 1 AND date = ?').get(date);
+    const { data: updated, error: updatedError } = await supabase
+      .from('workout_logs')
+      .select('*')
+      .eq('user_id', 1)
+      .eq('date', date)
+      .single();
+    if (updatedError) throw new Error(updatedError.message);
+
     res.json({
       ...updated,
-      completed_exercises: JSON.parse(updated.completed_exercises || '[]'),
-      stats: JSON.parse(updated.stats || '{}'),
+      completed_exercises: updated.completed_exercises || [],
+      stats: updated.stats || {},
     });
   } catch (err) {
     console.error(err);
@@ -282,7 +372,7 @@ router.post('/complete/:date', (req, res) => {
 });
 
 // PATCH /api/workouts/log/:date/exercise - toggle individual exercise completion
-router.patch('/log/:date/exercise', (req, res) => {
+router.patch('/log/:date/exercise', async (req, res) => {
   try {
     const { date } = req.params;
     const { exerciseId, completed } = req.body;
@@ -291,13 +381,19 @@ router.patch('/log/:date/exercise', (req, res) => {
       return res.status(400).json({ error: 'exerciseId is required' });
     }
 
-    let log = db.prepare('SELECT * FROM workout_logs WHERE user_id = 1 AND date = ?').get(date);
+    const { data: log, error: logError } = await supabase
+      .from('workout_logs')
+      .select('*')
+      .eq('user_id', 1)
+      .eq('date', date)
+      .maybeSingle();
+    if (logError) throw new Error(logError.message);
 
     if (!log) {
       return res.status(404).json({ error: 'Workout log not found for this date' });
     }
 
-    let completedExercises = JSON.parse(log.completed_exercises || '[]');
+    let completedExercises = log.completed_exercises || [];
 
     if (completed) {
       if (!completedExercises.includes(exerciseId)) {
@@ -318,17 +414,25 @@ router.patch('/log/:date/exercise', (req, res) => {
       }
     }
 
-    db.prepare(`
-      UPDATE workout_logs
-      SET completed_exercises = ?, status = ?, updated_at = datetime('now')
-      WHERE user_id = 1 AND date = ?
-    `).run(JSON.stringify(completedExercises), newStatus, date);
+    const { error: updateError } = await supabase
+      .from('workout_logs')
+      .update({ completed_exercises: completedExercises, status: newStatus })
+      .eq('user_id', 1)
+      .eq('date', date);
+    if (updateError) throw new Error(updateError.message);
 
-    const updated = db.prepare('SELECT * FROM workout_logs WHERE user_id = 1 AND date = ?').get(date);
+    const { data: updated, error: updatedError } = await supabase
+      .from('workout_logs')
+      .select('*')
+      .eq('user_id', 1)
+      .eq('date', date)
+      .single();
+    if (updatedError) throw new Error(updatedError.message);
+
     res.json({
       ...updated,
-      completed_exercises: JSON.parse(updated.completed_exercises || '[]'),
-      stats: JSON.parse(updated.stats || '{}'),
+      completed_exercises: updated.completed_exercises || [],
+      stats: updated.stats || {},
     });
   } catch (err) {
     console.error(err);
@@ -336,12 +440,16 @@ router.patch('/log/:date/exercise', (req, res) => {
   }
 });
 
-function calculateStreak(userId, today) {
-  const logs = db.prepare(
-    "SELECT date, status FROM workout_logs WHERE user_id = ? AND status = 'completed' ORDER BY date DESC"
-  ).all(userId);
+async function calculateStreak(userId, today) {
+  const { data: logs, error } = await supabase
+    .from('workout_logs')
+    .select('date, status')
+    .eq('user_id', userId)
+    .eq('status', 'completed')
+    .order('date', { ascending: false });
+  if (error) throw new Error(error.message);
 
-  if (!logs.length) return 0;
+  if (!logs || !logs.length) return 0;
 
   const completedDates = new Set(logs.map(l => l.date));
   let streak = 0;

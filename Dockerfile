@@ -27,16 +27,13 @@ COPY server/src/ ./src/
 # Copy built client from stage 1
 COPY --from=client-build /app/client/dist ./client/dist
 
-# Create data directory for SQLite volume mount
-RUN mkdir -p /app/data && \
-    addgroup -S appgroup && adduser -S appuser -G appgroup && \
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup && \
     chown -R appuser:appgroup /app
 
 USER appuser
 
 ENV NODE_ENV=production
 ENV PORT=3001
-ENV DATABASE_URL=/app/data/rehab.db
 
 EXPOSE 3001
 

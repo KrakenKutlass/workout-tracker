@@ -1,5 +1,5 @@
 const cron = require('node-cron');
-const db = require('./db');
+const supabase = require('./supabase');
 const { sendWorkoutReminder } = require('./notifications');
 const { getWorkoutTypeForDay, getWeekNumber } = require('./workoutData');
 
@@ -19,19 +19,26 @@ async function checkAndNotifyUser(user) {
   const today = new Date().toISOString().split('T')[0];
 
   // Check how many notifications sent today for this user
-  const notifCount = db.prepare(
-    'SELECT COUNT(*) as count FROM notification_logs WHERE user_id = ? AND date = ?'
-  ).get(user.id, today);
+  const { count, error: countError } = await supabase
+    .from('notification_logs')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+    .eq('date', today);
+  if (countError) throw new Error(countError.message);
 
-  if (notifCount.count >= 2) {
+  if (count >= 2) {
     console.log(`[Scheduler] Max notifications (2) already sent to user ${user.id} today`);
     return;
   }
 
   // Check if workout already completed
-  const log = db.prepare(
-    "SELECT status FROM workout_logs WHERE user_id = ? AND date = ?"
-  ).get(user.id, today);
+  const { data: log, error: logError } = await supabase
+    .from('workout_logs')
+    .select('status')
+    .eq('user_id', user.id)
+    .eq('date', today)
+    .maybeSingle();
+  if (logError) throw new Error(logError.message);
 
   if (log && log.status === 'completed') {
     console.log(`[Scheduler] User ${user.id} already completed workout today`);
@@ -53,21 +60,23 @@ async function checkAndNotifyUser(user) {
   const result = await sendWorkoutReminder(user, workoutType, weekNumber);
 
   // Log the notifications
-  const insertNotif = db.prepare(
-    'INSERT INTO notification_logs (user_id, date, type) VALUES (?, ?, ?)'
-  );
-
   if (result.email) {
-    insertNotif.run(user.id, today, 'email');
+    const { error: emailInsertError } = await supabase
+      .from('notification_logs')
+      .insert({ user_id: user.id, date: today, type: 'email' });
+    if (emailInsertError) throw new Error(emailInsertError.message);
   }
   if (result.sms) {
-    insertNotif.run(user.id, today, 'sms');
+    const { error: smsInsertError } = await supabase
+      .from('notification_logs')
+      .insert({ user_id: user.id, date: today, type: 'sms' });
+    if (smsInsertError) throw new Error(smsInsertError.message);
   }
 
   return result;
 }
 
-function scheduleReminders() {
+async function scheduleReminders() {
   // Stop existing jobs
   Object.values(scheduledJobs).forEach(job => {
     if (job && job.stop) job.stop();
@@ -75,7 +84,10 @@ function scheduleReminders() {
   scheduledJobs = {};
 
   try {
-    const users = db.prepare('SELECT * FROM users').all();
+    const { data: users, error } = await supabase
+      .from('users')
+      .select('*');
+    if (error) throw new Error(error.message);
 
     users.forEach(user => {
       const [hours, minutes] = (user.reminder_time || '20:00').split(':');
@@ -90,7 +102,12 @@ function scheduleReminders() {
         console.log(`[Scheduler] Running reminder check for user ${user.id} at ${user.reminder_time}`);
         try {
           // Refresh user data before sending
-          const freshUser = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
+          const { data: freshUser, error: freshError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', user.id)
+            .maybeSingle();
+          if (freshError) throw new Error(freshError.message);
           if (freshUser) {
             await checkAndNotifyUser(freshUser);
           }

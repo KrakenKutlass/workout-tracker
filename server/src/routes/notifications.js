@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
+const supabase = require('../supabase');
 const { sendWorkoutReminder, sendEmail, sendSMS } = require('../notifications');
 const { getWorkoutTypeForDay, getWeekNumber } = require('../workoutData');
 const { checkAndNotifyUser } = require('../scheduler');
@@ -50,12 +50,16 @@ router.get('/config-status', (req, res) => {
 });
 
 // GET /api/notifications/logs - get notification history
-router.get('/logs', (req, res) => {
+router.get('/logs', async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 50;
-    const logs = db.prepare(
-      'SELECT * FROM notification_logs WHERE user_id = 1 ORDER BY sent_at DESC LIMIT ?'
-    ).all(limit);
+    const { data: logs, error } = await supabase
+      .from('notification_logs')
+      .select('*')
+      .eq('user_id', 1)
+      .order('sent_at', { ascending: false })
+      .limit(limit);
+    if (error) throw new Error(error.message);
     res.json(logs);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -66,7 +70,12 @@ router.get('/logs', (req, res) => {
 router.post('/test', async (req, res) => {
   try {
     const { type } = req.body; // 'email', 'sms', or 'both'
-    const user = db.prepare('SELECT * FROM users WHERE id = 1').get();
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', 1)
+      .single();
+    if (userError) throw new Error(userError.message);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const results = {};
@@ -97,7 +106,12 @@ router.post('/test', async (req, res) => {
 // POST /api/notifications/trigger - manually trigger the daily check
 router.post('/trigger', async (req, res) => {
   try {
-    const user = db.prepare('SELECT * FROM users WHERE id = 1').get();
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', 1)
+      .single();
+    if (userError) throw new Error(userError.message);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const result = await checkAndNotifyUser(user);
@@ -111,7 +125,12 @@ router.post('/trigger', async (req, res) => {
 // POST /api/notifications/reminder - send a workout reminder directly
 router.post('/reminder', async (req, res) => {
   try {
-    const user = db.prepare('SELECT * FROM users WHERE id = 1').get();
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', 1)
+      .single();
+    if (userError) throw new Error(userError.message);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const dayIndex = getDayIndex(user.start_date);
@@ -123,11 +142,18 @@ router.post('/reminder', async (req, res) => {
 
     // Log it
     const today = new Date().toISOString().split('T')[0];
-    const insertNotif = db.prepare(
-      'INSERT INTO notification_logs (user_id, date, type) VALUES (?, ?, ?)'
-    );
-    if (result.email && result.email.success) insertNotif.run(user.id, today, 'email');
-    if (result.sms && result.sms.success) insertNotif.run(user.id, today, 'sms');
+    if (result.email && result.email.success) {
+      const { error: emailLogError } = await supabase
+        .from('notification_logs')
+        .insert({ user_id: user.id, date: today, type: 'email' });
+      if (emailLogError) throw new Error(emailLogError.message);
+    }
+    if (result.sms && result.sms.success) {
+      const { error: smsLogError } = await supabase
+        .from('notification_logs')
+        .insert({ user_id: user.id, date: today, type: 'sms' });
+      if (smsLogError) throw new Error(smsLogError.message);
+    }
 
     res.json({ message: 'Reminder sent', result });
   } catch (err) {

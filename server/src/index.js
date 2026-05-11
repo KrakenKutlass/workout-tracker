@@ -4,9 +4,6 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 
-// Initialize DB (creates tables + seeds default user)
-const db = require('./db');
-
 const workoutsRouter = require('./routes/workouts');
 const usersRouter = require('./routes/users');
 const notificationsRouter = require('./routes/notifications');
@@ -67,6 +64,12 @@ if (process.env.NODE_ENV === 'production') {
 // Start server
 app.listen(PORT, () => {
   console.log(`\n🏋️  Rehab Loop Server running on port ${PORT}`);
+  // Supabase configuration check
+  if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY) {
+    console.log('   Supabase: configured');
+  } else {
+    console.warn('   Supabase: NOT configured (SUPABASE_URL or SUPABASE_SERVICE_KEY missing)');
+  }
   console.log(`   Health check: http://localhost:${PORT}/api/health`);
   console.log(`   API base: http://localhost:${PORT}/api\n`);
 
