@@ -5,6 +5,8 @@ import Workout from './pages/Workout.jsx';
 import Progress from './pages/Progress.jsx';
 import Settings from './pages/Settings.jsx';
 import InfoHub from './pages/InfoHub.jsx';
+import Login from './pages/Login.jsx';
+import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 
 export const ThemeContext = React.createContext();
 
@@ -125,23 +127,47 @@ function Layout({ children }) {
   );
 }
 
+function FullScreenSpinner() {
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-8 h-8 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" />
+        <span className="text-sm text-gray-500 dark:text-gray-400">Loading...</span>
+      </div>
+    </div>
+  );
+}
+
+function ProtectedApp() {
+  const { session, loading } = useAuth();
+
+  if (loading) return <FullScreenSpinner />;
+  if (!session) return <Login />;
+
+  return (
+    <Layout>
+      <div className="page-enter">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/workout" element={<Workout />} />
+          <Route path="/workout/:date" element={<Workout />} />
+          <Route path="/progress" element={<Progress />} />
+          <Route path="/info" element={<InfoHub />} />
+          <Route path="/settings" element={<Settings />} />
+        </Routes>
+      </div>
+    </Layout>
+  );
+}
+
 export default function App() {
   return (
     <ThemeProvider>
-      <BrowserRouter>
-        <Layout>
-          <div className="page-enter">
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/workout" element={<Workout />} />
-              <Route path="/workout/:date" element={<Workout />} />
-              <Route path="/progress" element={<Progress />} />
-              <Route path="/info" element={<InfoHub />} />
-              <Route path="/settings" element={<Settings />} />
-            </Routes>
-          </div>
-        </Layout>
-      </BrowserRouter>
+      <AuthProvider>
+        <BrowserRouter>
+          <ProtectedApp />
+        </BrowserRouter>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

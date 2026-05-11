@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { usersApi, notificationsApi } from '../api.js';
 import { ThemeContext } from '../App.jsx';
+import { supabase } from '../lib/supabase.js';
 import LoadingSpinner from '../components/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ErrorMessage.jsx';
 
@@ -131,6 +132,10 @@ export default function Settings() {
       setTestingNotif(false);
       setTimeout(() => setSaveMsg(null), 8000);
     }
+  };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
   };
 
   const handleReset = async () => {
@@ -341,6 +346,13 @@ export default function Settings() {
           </div>
         </div>
       )}
+
+      {/* Account */}
+      <div className="card">
+        <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-1">Account</h2>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">{user?.email}</p>
+        <button onClick={handleSignOut} className="btn-secondary w-full">Sign Out</button>
+      </div>
 
       {/* Danger zone */}
       <div className="card border border-red-200">
