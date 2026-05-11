@@ -1,0 +1,280 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { workoutsApi } from '../api.js';
+import ExerciseCard from '../components/ExerciseCard.jsx';
+import LoadingSpinner from '../components/LoadingSpinner.jsx';
+import ErrorMessage from '../components/ErrorMessage.jsx';
+
+const WORKOUT_GRADIENTS = {
+  A: 'from-blue-500 to-indigo-600',
+  B: 'from-purple-500 to-pink-600',
+  C: 'from-orange-500 to-red-600',
+};
+
+export default function Workout() {
+  const { date } = useParams();
+  const navigate = useNavigate();
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+
+  const targetDate = date || new Date().toISOString().split('T')[0];
+
+  const load = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      let result;
+      if (date) {
+        result = await workoutsApi.getByDate(date);
+        // Normalize structure to match today's format
+        setData({
+          today: result.date,
+          weekNumber: result.weekNumber,
+          workoutType: result.workoutType,
+          workout: result.workout,
+          log: result.log || { status: 'not_started', completed_exercises: [] },
+          programDay: result.programDay,
+        });
+      } else {
+        result = await workoutsApi.getToday();
+        setData(result);
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, [date]);
+
+  const handleToggleExercise = async (exerciseId, completed) => {
+    if (!data) return;
+    setSaving(true);
+    try {
+      // Create log if it doesn't exist
+      if (!data.log?.id && !date) {
+        await workoutsApi.logWorkout({
+          date: targetDate,
+          workout_type: data.workoutType,
+          status: 'in_progress',
+          completed_exercises: [],
+        });
+      }
+      const updated = await workoutsApi.toggleExercise(targetDate, exerciseId, completed);
+      setData(prev => ({
+        ...prev,
+        log: {
+          ...updated,
+          completed_exercises: updated.completed_exercises,
+        },
+      }));
+
+      // Show confetti on completion
+      if (updated.status === 'completed' && data.log?.status !== 'completed') {
+        setShowConfetti(true);
+        setTimeout(() => setShowConfetti(false), 3000);
+      }
+    } catch (err) {
+      console.error('Toggle exercise error:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleStartWorkout = async () => {
+    if (!data) return;
+    try {
+      await workoutsApi.logWorkout({
+        date: targetDate,
+        workout_type: data.workoutType,
+        status: 'in_progress',
+        completed_exercises: [],
+      });
+      await load();
+    } catch (err) {
+      console.error('Start workout error:', err);
+    }
+  };
+
+  if (loading) return <LoadingSpinner message="Loading workout..." />;
+  if (error) return <ErrorMessage error={error} onRetry={load} />;
+  if (!data) return null;
+
+  const { workout, log } = data;
+  if (!workout) {
+    return (
+      <div className="px-4 pt-6">
+        <div className="card text-center py-12">
+          <p className="text-gray-500">No workout scheduled for this date</p>
+          <button onClick={() => navigate('/')} className="btn-primary mt-4">Back to Home</button>
+        </div>
+      </div>
+    );
+  }
+
+  const completedExercises = log?.completed_exercises || [];
+  const totalExercises = workout.exercises?.length || 0;
+  const completedCount = completedExercises.length;
+  const progress = totalExercises > 0 ? (completedCount / totalExercises) * 100 : 0;
+  const isCompleted = log?.status === 'completed';
+  const gradient = WORKOUT_GRADIENTS[workout.type] || 'from-gray-500 to-gray-700';
+  const isToday = targetDate === new Date().toISOString().split('T')[0];
+  const isPast = targetDate < new Date().toISOString().split('T')[0];
+
+  return (
+    <div className="pb-4">
+      {/* Header */}
+      <div className={`bg-gradient-to-br ${gradient} px-4 pt-6 pb-6 relative overflow-hidden`}>
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-1 text-white/70 hover:text-white text-sm mb-4 transition-colors"
+        >
+          ← Back
+        </button>
+
+        {/* Confetti */}
+        {showConfetti && (
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            {[...Array(20)].map((_, i) => (
+              <div
+                key={i}
+                className="absolute w-2 h-2 rounded-full animate-bounce"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  top: `${Math.random() * 100}%`,
+                  backgroundColor: ['#fff', '#ffd700', '#ff6b6b', '#4ecdc4'][Math.floor(Math.random() * 4)],
+                  animationDelay: `${Math.random() * 0.5}s`,
+                  animationDuration: `${0.5 + Math.random() * 0.5}s`,
+                }}
+              />
+            ))}
+          </div>
+        )}
+
+        <div className="flex items-start justify-between">
+          <div className="text-white">
+            <p className="text-sm opacity-75">
+              Week {data.weekNumber} • Day {data.programDay}
+              {!isToday && ` • ${new Date(targetDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`}
+            </p>
+            <h1 className="text-xl font-bold mt-0.5">Workout {workout.type}</h1>
+            <p className="text-base font-semibold mt-0.5">{workout.name}</p>
+            {workout.injuryMode && (
+              <span className="inline-block mt-1.5 text-xs bg-yellow-400 text-yellow-900 px-2 py-0.5 rounded-full font-semibold">
+                ⚠ Flare-up Mode
+              </span>
+            )}
+          </div>
+          {isCompleted && (
+            <div className="bg-green-400 text-green-900 text-xs font-bold px-3 py-1.5 rounded-full">
+              ✓ Done!
+            </div>
+          )}
+        </div>
+
+        {/* Progress */}
+        <div className="mt-4">
+          <div className="flex justify-between text-xs text-white/70 mb-1.5">
+            <span>{completedCount} / {totalExercises} exercises</span>
+            <span>{Math.round(progress)}%</span>
+          </div>
+          <div className="h-2 bg-white/30 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-white rounded-full transition-all duration-300"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Phase + circuit info */}
+        <div className="flex gap-2 mt-3">
+          <span className="text-xs bg-white/20 text-white px-2.5 py-1 rounded-full">
+            {workout.phaseLabel}
+          </span>
+          {workout.circuit && (
+            <span className="text-xs bg-white/20 text-white px-2.5 py-1 rounded-full">
+              {workout.rounds} Rounds
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="px-4 pt-4 space-y-3">
+        {/* Circuit instruction */}
+        {workout.circuit && (
+          <div className="bg-orange-50 border border-orange-200 rounded-xl p-3">
+            <p className="text-sm font-semibold text-orange-800">Circuit Training</p>
+            <p className="text-xs text-orange-600 mt-0.5">
+              Complete all exercises in sequence for 1 round, rest {workout.restBetweenRounds}s between rounds. Do {workout.rounds} rounds total.
+            </p>
+          </div>
+        )}
+
+        {/* Start button if not started */}
+        {log?.status === 'not_started' && isToday && (
+          <button onClick={handleStartWorkout} className="btn-primary w-full">
+            Start Workout →
+          </button>
+        )}
+
+        {/* Saving indicator */}
+        {saving && (
+          <div className="flex items-center justify-center gap-2 text-sm text-gray-500 py-1">
+            <div className="w-4 h-4 border-2 border-brand-200 border-t-brand-600 rounded-full animate-spin"/>
+            Saving...
+          </div>
+        )}
+
+        {/* Completion message */}
+        {isCompleted && (
+          <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
+            <p className="text-2xl mb-1">🎉</p>
+            <p className="text-sm font-bold text-green-800">Workout Complete!</p>
+            <p className="text-xs text-green-600 mt-0.5">Great work! Keep the momentum going.</p>
+            <button onClick={() => navigate('/')} className="mt-3 text-sm text-green-700 font-semibold underline">
+              Back to Dashboard
+            </button>
+          </div>
+        )}
+
+        {/* Exercise list */}
+        <div className="space-y-3">
+          {workout.exercises?.map((exercise, index) => (
+            <ExerciseCard
+              key={exercise.id}
+              exercise={exercise}
+              completed={completedExercises.includes(exercise.id)}
+              onToggle={handleToggleExercise}
+              index={index}
+              isCircuit={workout.circuit}
+              disabled={(!isToday && !isPast) || log?.status === 'not_started'}
+            />
+          ))}
+        </div>
+
+        {/* Notes area (future enhancement placeholder) */}
+        {(isToday || isPast) && log?.status !== 'not_started' && (
+          <div className="card">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">How did it feel?</p>
+            <div className="flex gap-2">
+              {['💪 Strong', '😤 Tough', '😅 Hard', '🔥 Crushed it'].map(label => (
+                <button
+                  key={label}
+                  className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-1.5 rounded-full transition-colors"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
