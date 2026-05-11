@@ -242,7 +242,7 @@ export default function Settings() {
         </div>
 
         <div className="card">
-          <h2 className="font-semibold text-gray-800 mb-4">Notifications</h2>
+          <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-4">Notifications</h2>
           <div className="space-y-3">
             <div>
               <label className="label">Daily Reminder Time</label>
@@ -270,8 +270,8 @@ export default function Settings() {
 
       {/* Notification testing */}
       <div className="card">
-        <h2 className="font-semibold text-gray-800 mb-1">Test Notifications</h2>
-        <p className="text-xs text-gray-500 mb-3">
+        <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-1">Test Notifications</h2>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
           Send test notifications to verify your setup. Requires valid SMTP and Twilio credentials in .env
         </p>
         <div className="flex flex-wrap gap-2">
