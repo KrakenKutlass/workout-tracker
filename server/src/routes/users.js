@@ -43,6 +43,7 @@ router.patch('/me', async (req, res) => {
     const updatedStartDate = start_date !== undefined ? start_date : user.start_date;
     const updatedInjuryMode = injury_mode !== undefined ? !!injury_mode : user.injury_mode;
     const updatedReminderTime = reminder_time !== undefined ? reminder_time : user.reminder_time;
+    const updatedTimezone = req.body.timezone !== undefined ? req.body.timezone : (user.timezone || 'Europe/London');
 
     // Validate reminder_time format (HH:MM)
     if (reminder_time && !/^\d{2}:\d{2}$/.test(reminder_time)) {
@@ -58,6 +59,7 @@ router.patch('/me', async (req, res) => {
         start_date: updatedStartDate,
         injury_mode: updatedInjuryMode,
         reminder_time: updatedReminderTime,
+        timezone: updatedTimezone,
       })
       .eq('id', req.userId)
       .select()

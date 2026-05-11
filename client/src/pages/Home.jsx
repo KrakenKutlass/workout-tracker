@@ -107,7 +107,9 @@ export default function Home() {
 
       {/* Today's workout */}
       <div>
-        <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Today's Workout</h2>
+        <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+          {data.log?.status === 'completed' ? "Today's Workout ✓" : "Today's Workout"}
+        </h2>
         {data.workout ? (
           <WorkoutCard
             workout={data.workout}
@@ -121,6 +123,26 @@ export default function Home() {
           </div>
         )}
       </div>
+
+      {/* Tomorrow's workout — shown after today is completed */}
+      {data.log?.status === 'completed' && data.tomorrowWorkout && (
+        <div>
+          <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Tomorrow's Workout</h2>
+          <div className="card border border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">
+                {data.tomorrowWorkoutType === 'A' ? '💪' : data.tomorrowWorkoutType === 'B' ? '🦵' : '⚡'}
+              </span>
+              <div className="flex-1">
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide">Workout {data.tomorrowWorkoutType}</p>
+                <p className="font-semibold text-gray-800 dark:text-gray-100">{data.tomorrowWorkout.name}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{data.tomorrowWorkout.exercises?.length} exercises · {data.tomorrowWorkout.phaseLabel}</p>
+              </div>
+              <span className="text-xs text-gray-400 dark:text-gray-500">Tomorrow</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Quick stats */}
       <div className="grid grid-cols-3 gap-3">

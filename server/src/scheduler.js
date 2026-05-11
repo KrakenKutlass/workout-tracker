@@ -1,37 +1,71 @@
 const cron = require('node-cron');
 const supabase = require('./supabase');
 const { sendWorkoutReminder } = require('./notifications');
-const { getWorkoutTypeForDay, getWeekNumber } = require('./workoutData');
+const { WORKOUT_ROTATION, getWorkoutMeta } = require('./workoutData');
 
-// Track active cron jobs so we can restart them when settings change
 let scheduledJobs = {};
+let midnightJob = null;
 
-function getDayIndex(startDate) {
-  const start = new Date(startDate);
-  const today = new Date();
-  start.setHours(0, 0, 0, 0);
-  today.setHours(0, 0, 0, 0);
-  const diffMs = today - start;
-  return Math.floor(diffMs / (1000 * 60 * 60 * 24));
+function getTodayInTimezone(timezone) {
+  try {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: timezone || 'Europe/London',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(new Date());
+  } catch (e) {
+    return new Date().toISOString().split('T')[0];
+  }
+}
+
+function getYesterdayInTimezone(timezone) {
+  try {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: timezone || 'Europe/London',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(yesterday);
+  } catch (e) {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().split('T')[0];
+  }
+}
+
+async function markMissedWorkouts() {
+  try {
+    const { data: users, error } = await supabase.from('users').select('*');
+    if (error || !users) return;
+
+    for (const user of users) {
+      const yesterday = getYesterdayInTimezone(user.timezone);
+      const { error: updateError } = await supabase
+        .from('workout_logs')
+        .update({ status: 'missed' })
+        .eq('user_id', user.id)
+        .eq('date', yesterday)
+        .in('status', ['not_started', 'in_progress']);
+      if (updateError) {
+        console.error(`[Scheduler] Error marking missed for user ${user.id}:`, updateError.message);
+      }
+    }
+    console.log('[Scheduler] Missed workout check complete');
+  } catch (err) {
+    console.error('[Scheduler] Error in markMissedWorkouts:', err.message);
+  }
 }
 
 async function checkAndNotifyUser(user) {
-  const today = new Date().toISOString().split('T')[0];
+  const today = getTodayInTimezone(user.timezone);
 
-  // Check how many notifications sent today for this user
   const { count, error: countError } = await supabase
     .from('notification_logs')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', user.id)
     .eq('date', today);
   if (countError) throw new Error(countError.message);
+  if (count >= 2) return;
 
-  if (count >= 2) {
-    console.log(`[Scheduler] Max notifications (2) already sent to user ${user.id} today`);
-    return;
-  }
-
-  // Check if workout already completed
   const { data: log, error: logError } = await supabase
     .from('workout_logs')
     .select('status')
@@ -39,59 +73,50 @@ async function checkAndNotifyUser(user) {
     .eq('date', today)
     .maybeSingle();
   if (logError) throw new Error(logError.message);
+  if (log && log.status === 'completed') return;
 
-  if (log && log.status === 'completed') {
-    console.log(`[Scheduler] User ${user.id} already completed workout today`);
-    return;
-  }
+  // Get completion-based workout type
+  const { count: completedCount } = await supabase
+    .from('workout_logs')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+    .eq('status', 'completed');
 
-  // Calculate today's workout
-  const dayIndex = getDayIndex(user.start_date);
-  if (dayIndex < 0) {
-    console.log(`[Scheduler] Program hasn't started yet for user ${user.id}`);
-    return;
-  }
-
-  const workoutType = getWorkoutTypeForDay(dayIndex);
-  const weekNumber = Math.min(getWeekNumber(dayIndex), 12);
-
-  console.log(`[Scheduler] Sending reminder to user ${user.id} for workout ${workoutType} week ${weekNumber}`);
+  const workoutType = WORKOUT_ROTATION[(completedCount || 0) % 7];
+  const weekNumber = Math.min(Math.floor((completedCount || 0) / 7) + 1, 12);
 
   const result = await sendWorkoutReminder(user, workoutType, weekNumber);
 
-  // Log the notifications
-  if (result.email) {
-    const { error: emailInsertError } = await supabase
-      .from('notification_logs')
-      .insert({ user_id: user.id, date: today, type: 'email' });
-    if (emailInsertError) throw new Error(emailInsertError.message);
+  if (result.email?.success) {
+    await supabase.from('notification_logs').insert({ user_id: user.id, date: today, type: 'email' });
   }
-  if (result.sms) {
-    const { error: smsInsertError } = await supabase
-      .from('notification_logs')
-      .insert({ user_id: user.id, date: today, type: 'sms' });
-    if (smsInsertError) throw new Error(smsInsertError.message);
+  if (result.sms?.success) {
+    await supabase.from('notification_logs').insert({ user_id: user.id, date: today, type: 'sms' });
   }
 
   return result;
 }
 
 async function scheduleReminders() {
-  // Stop existing jobs
-  Object.values(scheduledJobs).forEach(job => {
-    if (job && job.stop) job.stop();
-  });
+  Object.values(scheduledJobs).forEach(job => job?.stop?.());
   scheduledJobs = {};
+  midnightJob?.stop?.();
+
+  // Hourly midnight check — marks yesterday's incomplete logs as missed
+  // Runs every hour so it catches all user timezones near their midnight
+  midnightJob = cron.schedule('0 * * * *', async () => {
+    console.log('[Scheduler] Running hourly missed workout check');
+    await markMissedWorkouts();
+  });
 
   try {
-    const { data: users, error } = await supabase
-      .from('users')
-      .select('*');
+    const { data: users, error } = await supabase.from('users').select('*');
     if (error) throw new Error(error.message);
 
     users.forEach(user => {
       const [hours, minutes] = (user.reminder_time || '20:00').split(':');
       const cronExpression = `${minutes} ${hours} * * *`;
+      const userTimezone = user.timezone || 'Europe/London';
 
       if (!cron.validate(cronExpression)) {
         console.warn(`[Scheduler] Invalid cron expression for user ${user.id}: ${cronExpression}`);
@@ -99,25 +124,16 @@ async function scheduleReminders() {
       }
 
       const job = cron.schedule(cronExpression, async () => {
-        console.log(`[Scheduler] Running reminder check for user ${user.id} at ${user.reminder_time}`);
         try {
-          // Refresh user data before sending
-          const { data: freshUser, error: freshError } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', user.id)
-            .maybeSingle();
-          if (freshError) throw new Error(freshError.message);
-          if (freshUser) {
-            await checkAndNotifyUser(freshUser);
-          }
+          const { data: freshUser } = await supabase.from('users').select('*').eq('id', user.id).maybeSingle();
+          if (freshUser) await checkAndNotifyUser(freshUser);
         } catch (err) {
           console.error(`[Scheduler] Error checking user ${user.id}:`, err.message);
         }
-      }, { timezone: 'Europe/London' });
+      }, { timezone: userTimezone });
 
       scheduledJobs[user.id] = job;
-      console.log(`[Scheduler] Scheduled reminder for user ${user.id} at ${user.reminder_time}`);
+      console.log(`[Scheduler] Scheduled reminder for user ${user.id} at ${user.reminder_time} (${userTimezone})`);
     });
   } catch (err) {
     console.error('[Scheduler] Error setting up schedules:', err.message);

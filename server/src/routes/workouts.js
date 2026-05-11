@@ -3,6 +3,17 @@ const router = express.Router();
 const supabase = require('../supabase');
 const { getWorkoutMeta, getPhase, WORKOUT_ROTATION } = require('../workoutData');
 
+function getTodayInTimezone(timezone) {
+  try {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: timezone || 'Europe/London',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(new Date());
+  } catch (e) {
+    return new Date().toISOString().split('T')[0];
+  }
+}
+
 async function getCompletedCount(userId) {
   const { count, error } = await supabase
     .from('workout_logs')
@@ -24,7 +35,7 @@ router.get('/today', async (req, res) => {
     if (userError) throw new Error(userError.message);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayInTimezone(user.timezone);
     const completedCount = await getCompletedCount(req.userId);
 
     if (completedCount >= 84) {
@@ -39,6 +50,14 @@ router.get('/today', async (req, res) => {
     const workoutType = WORKOUT_ROTATION[completedCount % 7];
     const weekNumber = Math.floor(completedCount / 7) + 1;
     const workoutMeta = getWorkoutMeta(workoutType, weekNumber, user.injury_mode === true);
+
+    // Tomorrow's workout (next in sequence after today completes)
+    const nextCount = completedCount + 1;
+    const tomorrowWorkoutType = WORKOUT_ROTATION[nextCount % 7];
+    const tomorrowWeekNumber = Math.min(Math.floor(nextCount / 7) + 1, 12);
+    const tomorrowWorkout = nextCount < 84
+      ? getWorkoutMeta(tomorrowWorkoutType, tomorrowWeekNumber, user.injury_mode === true)
+      : null;
 
     // Get or create today's log
     let { data: log, error: logError } = await supabase
@@ -78,6 +97,8 @@ router.get('/today', async (req, res) => {
       phase: getPhase(weekNumber),
       workoutType,
       workout: workoutMeta,
+      tomorrowWorkout,
+      tomorrowWorkoutType,
       log: {
         ...log,
         completed_exercises: log.completed_exercises || [],
@@ -103,7 +124,7 @@ router.get('/progress', async (req, res) => {
     if (userError) throw new Error(userError.message);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayInTimezone(user.timezone);
     const completedCount = await getCompletedCount(req.userId);
 
     // Get completed logs ordered by date

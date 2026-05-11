@@ -45,6 +45,7 @@ export default function Settings() {
     reminder_time: '20:00',
     injury_mode: false,
     start_date: '',
+    timezone: 'Europe/London',
   });
 
   const load = async () => {
@@ -64,6 +65,7 @@ export default function Settings() {
         reminder_time: userData.reminder_time || '20:00',
         injury_mode: userData.injury_mode || false,
         start_date: userData.start_date || '',
+        timezone: userData.timezone || 'Europe/London',
       });
       setNotifLogs(logs);
       setNotifConfig(configStatus);
@@ -261,6 +263,41 @@ export default function Settings() {
         <div className="card">
           <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-4">Notifications</h2>
           <div className="space-y-3">
+            <div>
+              <label className="label">Timezone</label>
+              <select
+                className="input"
+                value={form.timezone}
+                onChange={e => setForm(prev => ({ ...prev, timezone: e.target.value }))}
+              >
+                <optgroup label="United Kingdom">
+                  <option value="Europe/London">London (GMT/BST)</option>
+                </optgroup>
+                <optgroup label="Europe">
+                  <option value="Europe/Paris">Paris / Berlin / Rome (CET)</option>
+                  <option value="Europe/Helsinki">Helsinki / Kyiv (EET)</option>
+                  <option value="Europe/Lisbon">Lisbon (WET)</option>
+                </optgroup>
+                <optgroup label="Americas">
+                  <option value="America/New_York">New York (ET)</option>
+                  <option value="America/Chicago">Chicago (CT)</option>
+                  <option value="America/Denver">Denver (MT)</option>
+                  <option value="America/Los_Angeles">Los Angeles (PT)</option>
+                  <option value="America/Toronto">Toronto (ET)</option>
+                  <option value="America/Vancouver">Vancouver (PT)</option>
+                  <option value="America/Sao_Paulo">São Paulo (BRT)</option>
+                </optgroup>
+                <optgroup label="Asia / Pacific">
+                  <option value="Asia/Dubai">Dubai (GST)</option>
+                  <option value="Asia/Kolkata">Mumbai / Delhi (IST)</option>
+                  <option value="Asia/Singapore">Singapore / KL (SGT)</option>
+                  <option value="Asia/Tokyo">Tokyo (JST)</option>
+                  <option value="Australia/Sydney">Sydney (AEST)</option>
+                  <option value="Pacific/Auckland">Auckland (NZST)</option>
+                </optgroup>
+              </select>
+              <p className="text-xs text-gray-400 mt-1">Used for midnight rollover and reminder scheduling</p>
+            </div>
             <div>
               <label className="label">Daily Reminder Time</label>
               <input
