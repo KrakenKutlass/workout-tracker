@@ -46,20 +46,10 @@ router.get('/today', async (req, res) => {
       });
     }
 
-    const programDay = completedCount + 1;
-    const workoutType = WORKOUT_ROTATION[completedCount % 7];
-    const weekNumber = Math.floor(completedCount / 7) + 1;
-    const workoutMeta = getWorkoutMeta(workoutType, weekNumber, user.injury_mode === true);
-
-    // Tomorrow's workout (next in sequence after today completes)
-    const nextCount = completedCount + 1;
-    const tomorrowWorkoutType = WORKOUT_ROTATION[nextCount % 7];
-    const tomorrowWeekNumber = Math.min(Math.floor(nextCount / 7) + 1, 12);
-    const tomorrowWorkout = nextCount < 84
-      ? getWorkoutMeta(tomorrowWorkoutType, tomorrowWeekNumber, user.injury_mode === true)
-      : null;
-
-    // Get or create today's log
+    // Fetch today's log first so we can determine the correct workout index.
+    // After completing today's workout, completedCount already includes it, so
+    // WORKOUT_ROTATION[completedCount % 7] would point to tomorrow's workout.
+    // We correct for this by stepping back one when today is already completed.
     let { data: log, error: logError } = await supabase
       .from('workout_logs')
       .select('*')
@@ -67,6 +57,23 @@ router.get('/today', async (req, res) => {
       .eq('date', today)
       .maybeSingle();
     if (logError) throw new Error(logError.message);
+
+    const todayCompleted = log?.status === 'completed';
+
+    // todayIndex = position in the 84-workout sequence for today's slot
+    const todayIndex = todayCompleted ? completedCount - 1 : completedCount;
+    const programDay = todayIndex + 1;
+    const workoutType = log?.workout_type || WORKOUT_ROTATION[todayIndex % 7];
+    const weekNumber = Math.floor(todayIndex / 7) + 1;
+    const workoutMeta = getWorkoutMeta(workoutType, weekNumber, user.injury_mode === true);
+
+    // Tomorrow's workout = always the next uncompleted slot
+    const tomorrowIndex = completedCount; // after completion this is already +1
+    const tomorrowWorkoutType = WORKOUT_ROTATION[tomorrowIndex % 7];
+    const tomorrowWeekNumber = Math.min(Math.floor(tomorrowIndex / 7) + 1, 12);
+    const tomorrowWorkout = todayCompleted && tomorrowIndex < 84
+      ? getWorkoutMeta(tomorrowWorkoutType, tomorrowWeekNumber, user.injury_mode === true)
+      : null;
 
     if (!log) {
       const { error: insertError } = await supabase
@@ -98,7 +105,7 @@ router.get('/today', async (req, res) => {
       workoutType,
       workout: workoutMeta,
       tomorrowWorkout,
-      tomorrowWorkoutType,
+      tomorrowWorkoutType: todayCompleted ? tomorrowWorkoutType : null,
       log: {
         ...log,
         completed_exercises: log.completed_exercises || [],
