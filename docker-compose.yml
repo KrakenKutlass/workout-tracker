@@ -1,0 +1,23 @@
+services:
+  rehab-loop:
+    build: .
+    container_name: rehab-loop
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    volumes:
+      - rehab-data:/app/server/data
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  rehab-data:
+    driver: local
