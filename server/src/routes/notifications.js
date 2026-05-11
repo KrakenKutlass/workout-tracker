@@ -83,16 +83,16 @@ router.post('/test', async (req, res) => {
     if (type === 'email' || type === 'both' || !type) {
       results.email = await sendEmail({
         to: user.email,
-        subject: 'Rehab Loop - Test Notification',
-        text: 'This is a test notification from Rehab Loop. Your notifications are configured correctly!',
-        html: '<p>This is a test notification from <strong>Rehab Loop</strong>. Your notifications are configured correctly!</p>',
+        subject: 'Kraken2Shape - Test Notification',
+        text: 'This is a test notification from Kraken2Shape. Your notifications are configured correctly!',
+        html: '<p>This is a test notification from <strong>Kraken2Shape</strong>. Your notifications are configured correctly!</p>',
       });
     }
 
     if (type === 'sms' || type === 'both') {
       results.sms = await sendSMS({
         to: user.phone,
-        body: 'Rehab Loop: Test notification. Your SMS reminders are working!',
+        body: 'Kraken2Shape: Test notification. Your SMS reminders are working!',
       });
     }
 

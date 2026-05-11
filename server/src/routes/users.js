@@ -122,4 +122,34 @@ router.post('/reset', async (req, res) => {
   }
 });
 
+// DELETE /api/users/me - delete account and all data
+router.delete('/me', async (req, res) => {
+  try {
+    // Get the auth_id before deleting the user record
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('auth_id')
+      .eq('id', req.userId)
+      .single();
+    if (userError) throw new Error(userError.message);
+
+    // Delete all user data
+    await supabase.from('notification_logs').delete().eq('user_id', req.userId);
+    await supabase.from('workout_logs').delete().eq('user_id', req.userId);
+    const { error: deleteUserError } = await supabase.from('users').delete().eq('id', req.userId);
+    if (deleteUserError) throw new Error(deleteUserError.message);
+
+    // Delete the Supabase Auth user (requires service role)
+    if (user?.auth_id) {
+      const { error: authDeleteError } = await supabase.auth.admin.deleteUser(user.auth_id);
+      if (authDeleteError) console.error('[DeleteAccount] Auth delete error:', authDeleteError.message);
+    }
+
+    res.json({ message: 'Account deleted successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

@@ -37,6 +37,8 @@ export default function Settings() {
   const [notifConfig, setNotifConfig] = useState(null);
   const [testingNotif, setTestingNotif] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   const [form, setForm] = useState({
     name: '',
@@ -138,6 +140,18 @@ export default function Settings() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeletingAccount(true);
+    try {
+      await usersApi.deleteAccount();
+      await supabase.auth.signOut();
+    } catch (err) {
+      setSaveMsg({ type: 'error', text: `Failed to delete account: ${err.message}` });
+      setDeletingAccount(false);
+      setShowDeleteConfirm(false);
+    }
   };
 
   const handleReset = async () => {
@@ -412,6 +426,44 @@ export default function Settings() {
                 Yes, Reset Everything
               </button>
               <button onClick={() => setShowResetConfirm(false)} className="btn-secondary py-2 text-sm">
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Delete account */}
+      <div className="card border border-red-300 bg-red-50 dark:bg-red-950/20">
+        <h2 className="font-semibold text-red-700 dark:text-red-400 mb-1">Delete Account</h2>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+          Permanently delete your account and all associated data. This action cannot be undone.
+        </p>
+        {!showDeleteConfirm ? (
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="w-full py-2 text-sm font-semibold text-red-700 dark:text-red-400 border-2 border-red-400 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+          >
+            Delete My Account
+          </button>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-sm font-semibold text-red-700 dark:text-red-400">
+              This will permanently delete your account and all workout history. There is no recovery.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deletingAccount}
+                className="btn-danger py-2 text-sm flex-1 disabled:opacity-50"
+              >
+                {deletingAccount ? 'Deleting…' : 'Yes, Delete Forever'}
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deletingAccount}
+                className="btn-secondary py-2 text-sm flex-1"
+              >
                 Cancel
               </button>
             </div>

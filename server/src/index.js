@@ -64,7 +64,7 @@ if (process.env.NODE_ENV === 'production') {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`\n🏋️  Rehab Loop Server running on port ${PORT}`);
+  console.log(`\n🐙  Kraken2Shape Server running on port ${PORT}`);
   // Supabase configuration check
   if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY) {
     console.log('   Supabase: configured');

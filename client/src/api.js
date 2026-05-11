@@ -51,6 +51,7 @@ export const usersApi = {
     body: JSON.stringify(data),
   }),
   resetProgram: () => request('/users/reset', { method: 'POST' }),
+  deleteAccount: () => request('/users/me', { method: 'DELETE' }),
 };
 
 // Notifications API

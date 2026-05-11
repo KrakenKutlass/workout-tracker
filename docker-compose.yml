@@ -1,11 +1,11 @@
 services:
-  rehab-loop:
+  kraken2shape:
     build:
       context: .
       args:
         - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
         - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
-    container_name: rehab-loop
+    container_name: kraken2shape
     restart: unless-stopped
     ports:
       - "3004:3001"
@@ -20,7 +20,7 @@ services:
       - NODEMAILER_PORT=${NODEMAILER_PORT:-587}
       - NODEMAILER_USER=${NODEMAILER_USER:-}
       - NODEMAILER_PASS=${NODEMAILER_PASS:-}
-      - EMAIL_FROM=${EMAIL_FROM:-noreply@rehabloop.app}
+      - EMAIL_FROM=${EMAIL_FROM:-noreply@kraken2shape.app}
       - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID:-}
       - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN:-}
       - TWILIO_FROM=${TWILIO_FROM:-}

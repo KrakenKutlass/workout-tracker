@@ -8,7 +8,15 @@ const INFO_SECTIONS = [
     content: [
       {
         type: 'text',
-        text: 'The Rehab Loop is a 12-week progressive calisthenics program designed for rehabilitation and strength building. It combines structured bodyweight training with targeted rehab exercises to help you recover from injury while building functional strength.',
+        text: "Kraken2Shape is built for people dealing with injury, illness, or general deconditioning who want to get back on their feet — without the intimidation of a gym. Whether you're recovering from a knee injury, managing chronic pain, or just haven't moved properly in months, this program meets you where you are.",
+      },
+      {
+        type: 'text',
+        text: "The goal is simple: build enough strength, mobility, and confidence at home so that when you're ready, walking into a gym feels like the next natural step — not a scary one. No shame. No comparison. Just you, your body, and consistent progress.",
+      },
+      {
+        type: 'text',
+        text: 'The program combines structured bodyweight training with targeted rehab exercises across 3 progressive phases. Each phase builds on the last, so you grow stronger without rushing your recovery.',
       },
       {
         type: 'feature-list',
@@ -17,7 +25,7 @@ const INFO_SECTIONS = [
           '3 progressive phases of 4 weeks each',
           'Flare-up mode for high-pain days',
           'Streak tracking to maintain consistency',
-          'Automated email + SMS reminders',
+          'Automated email reminders',
         ],
       },
     ],
@@ -361,7 +369,7 @@ export default function InfoHub() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Info Hub</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Rehab guidance, protocol & motivation</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Program guidance, protocol & motivation</p>
       </div>
 
       {/* Quick tips banner */}

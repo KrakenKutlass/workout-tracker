@@ -19,7 +19,7 @@ function EyeIcon({ open }) {
   );
 }
 
-function RehabLoopLogo() {
+function AppLogo() {
   return (
     <svg viewBox="0 0 48 48" fill="none" className="w-12 h-12">
       <circle cx="24" cy="24" r="20" className="fill-brand-600" opacity="0.15"/>
@@ -95,10 +95,10 @@ export default function Login() {
         {/* Branding */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-3">
-            <RehabLoopLogo />
+            <AppLogo />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">
-            Rehab Loop
+            Kraken2Shape
           </h1>
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
             Your 12-week recovery program
@@ -206,7 +206,7 @@ export default function Login() {
 
         {/* Footer note */}
         <p className="text-center text-xs text-gray-400 dark:text-gray-600 mt-6">
-          Rehab Loop &mdash; Track your recovery, one workout at a time.
+          Kraken2Shape &mdash; Track your recovery, one workout at a time.
         </p>
       </div>
     </div>
