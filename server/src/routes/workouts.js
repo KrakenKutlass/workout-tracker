@@ -1,24 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const { getWorkoutTypeForDay, getWeekNumber, getWorkoutMeta, getPhase, WORKOUT_ROTATION } = require('../workoutData');
+const { getWorkoutMeta, getPhase, WORKOUT_ROTATION } = require('../workoutData');
 
-function getDayIndex(startDate) {
-  const start = new Date(startDate);
-  const today = new Date();
-  start.setHours(0, 0, 0, 0);
-  today.setHours(0, 0, 0, 0);
-  const diffMs = today - start;
-  return Math.floor(diffMs / (1000 * 60 * 60 * 24));
-}
-
-function getDateDayIndex(startDate, targetDate) {
-  const start = new Date(startDate);
-  const target = new Date(targetDate);
-  start.setHours(0, 0, 0, 0);
-  target.setHours(0, 0, 0, 0);
-  const diffMs = target - start;
-  return Math.floor(diffMs / (1000 * 60 * 60 * 24));
+function getCompletedCount(userId) {
+  return db.prepare(
+    "SELECT COUNT(*) as count FROM workout_logs WHERE user_id = ? AND status = 'completed'"
+  ).get(userId).count;
 }
 
 // GET /api/workouts/today - get today's workout info
@@ -28,19 +16,19 @@ router.get('/today', (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const today = new Date().toISOString().split('T')[0];
-    const dayIndex = getDayIndex(user.start_date);
+    const completedCount = getCompletedCount(user.id);
 
-    if (dayIndex < 0) {
+    if (completedCount >= 84) {
       return res.json({
-        programDay: dayIndex,
-        message: 'Program has not started yet',
-        startDate: user.start_date,
+        programDay: 84,
+        message: 'Program complete! You have finished all 84 workouts.',
+        completedCount,
       });
     }
 
-    const clampedDay = Math.min(dayIndex, 83); // 12 weeks max
-    const weekNumber = Math.min(getWeekNumber(clampedDay), 12);
-    const workoutType = getWorkoutTypeForDay(clampedDay);
+    const programDay = completedCount + 1;
+    const workoutType = WORKOUT_ROTATION[completedCount % 7];
+    const weekNumber = Math.floor(completedCount / 7) + 1;
     const workoutMeta = getWorkoutMeta(workoutType, weekNumber, user.injury_mode === 1);
 
     // Get or create today's log
@@ -54,11 +42,11 @@ router.get('/today', (req, res) => {
     }
 
     // Calculate streak
-    const streak = calculateStreak(user.id, user.start_date, today);
+    const streak = calculateStreak(user.id, today);
 
     res.json({
       today,
-      programDay: dayIndex + 1,
+      programDay,
       weekNumber,
       phase: getPhase(weekNumber),
       workoutType,
@@ -66,6 +54,7 @@ router.get('/today', (req, res) => {
       log: {
         ...log,
         completed_exercises: JSON.parse(log.completed_exercises || '[]'),
+        stats: JSON.parse(log.stats || '{}'),
       },
       streak,
       injuryMode: user.injury_mode === 1,
@@ -82,64 +71,75 @@ router.get('/progress', (req, res) => {
     const user = db.prepare('SELECT * FROM users WHERE id = 1').get();
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    const logs = db.prepare('SELECT * FROM workout_logs WHERE user_id = 1 ORDER BY date ASC').all();
-    const logMap = {};
-    logs.forEach(log => {
-      logMap[log.date] = {
-        ...log,
-        completed_exercises: JSON.parse(log.completed_exercises || '[]'),
-      };
-    });
-
     const today = new Date().toISOString().split('T')[0];
-    const currentDayIndex = getDayIndex(user.start_date);
+    const completedCount = getCompletedCount(user.id);
 
-    // Build 84-day grid (12 weeks × 7 days)
+    // Get completed logs ordered by date
+    const completedLogs = db.prepare(
+      "SELECT * FROM workout_logs WHERE user_id = 1 AND status = 'completed' ORDER BY date ASC"
+    ).all();
+
+    // Check for in_progress log today
+    const inProgressLog = db.prepare(
+      "SELECT * FROM workout_logs WHERE user_id = 1 AND date = ? AND status = 'in_progress'"
+    ).get(today);
+
+    // Build 84-slot grid (completion-based, not calendar-based)
     const grid = [];
     for (let i = 0; i < 84; i++) {
-      const date = new Date(user.start_date);
-      date.setDate(date.getDate() + i);
-      const dateStr = date.toISOString().split('T')[0];
-      const weekNumber = Math.floor(i / 7) + 1;
       const workoutType = WORKOUT_ROTATION[i % 7];
-      const log = logMap[dateStr];
-      const isPast = dateStr < today;
-      const isToday = dateStr === today;
-      const isFuture = dateStr > today;
+      const weekNumber = Math.floor(i / 7) + 1;
 
-      let status = 'future';
-      if (log) {
-        status = log.status;
-      } else if (isPast) {
-        status = 'missed';
-      } else if (isToday) {
-        status = 'not_started';
+      if (i < completedCount) {
+        // Completed slot - use actual completion date
+        const log = completedLogs[i];
+        grid.push({
+          day: i + 1,
+          date: log ? log.date : null,
+          weekNumber,
+          workoutType,
+          status: 'completed',
+          isToday: false,
+          isPast: true,
+          isFuture: false,
+        });
+      } else if (i === completedCount) {
+        // Current slot - today's workout
+        grid.push({
+          day: i + 1,
+          date: today,
+          weekNumber,
+          workoutType,
+          status: inProgressLog ? 'in_progress' : 'not_started',
+          isToday: true,
+          isPast: false,
+          isFuture: false,
+        });
+      } else {
+        // Future slot - no date yet
+        grid.push({
+          day: i + 1,
+          date: null,
+          weekNumber,
+          workoutType,
+          status: 'future',
+          isToday: false,
+          isPast: false,
+          isFuture: true,
+        });
       }
-
-      grid.push({
-        day: i + 1,
-        date: dateStr,
-        weekNumber,
-        workoutType,
-        status,
-        isToday,
-        isPast,
-        isFuture,
-      });
     }
 
-    const streak = calculateStreak(user.id, user.start_date, today);
-    const completedCount = logs.filter(l => l.status === 'completed').length;
-    const missedCount = grid.filter(d => d.status === 'missed').length;
+    const streak = calculateStreak(user.id, today);
 
     res.json({
       grid,
-      currentDayIndex,
-      currentWeek: Math.min(Math.floor(currentDayIndex / 7) + 1, 12),
+      currentDayIndex: completedCount,
+      currentWeek: Math.min(Math.floor(completedCount / 7) + 1, 12),
       streak,
       completedCount,
-      missedCount,
-      totalDays: Math.min(currentDayIndex + 1, 84),
+      missedCount: 0,
+      totalDays: completedCount + 1,
     });
   } catch (err) {
     console.error(err);
@@ -158,15 +158,26 @@ router.get('/:date', (req, res) => {
     const user = db.prepare('SELECT * FROM users WHERE id = 1').get();
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    const dayIndex = getDateDayIndex(user.start_date, date);
-    if (dayIndex < 0 || dayIndex >= 84) {
-      return res.status(400).json({ error: 'Date is outside the 12-week program' });
+    // Find the log for this date
+    const log = db.prepare('SELECT * FROM workout_logs WHERE user_id = 1 AND date = ?').get(date);
+
+    if (!log) {
+      return res.status(404).json({ error: 'No workout log found for this date' });
     }
 
-    const weekNumber = Math.min(getWeekNumber(dayIndex), 12);
-    const workoutType = getWorkoutTypeForDay(dayIndex);
+    // Get completion-based position of this log
+    const completedLogs = db.prepare(
+      "SELECT * FROM workout_logs WHERE user_id = 1 AND status = 'completed' ORDER BY date ASC"
+    ).all();
+    const logIndex = completedLogs.findIndex(l => l.date === date);
+
+    // Determine day index: if completed, use its position; else use completedCount
+    const completedCount = getCompletedCount(user.id);
+    const dayIndex = logIndex >= 0 ? logIndex : completedCount;
+
+    const weekNumber = Math.min(Math.floor(dayIndex / 7) + 1, 12);
+    const workoutType = log.workout_type;
     const workoutMeta = getWorkoutMeta(workoutType, weekNumber, user.injury_mode === 1);
-    const log = db.prepare('SELECT * FROM workout_logs WHERE user_id = 1 AND date = ?').get(date);
 
     res.json({
       date,
@@ -174,10 +185,11 @@ router.get('/:date', (req, res) => {
       weekNumber,
       workoutType,
       workout: workoutMeta,
-      log: log ? {
+      log: {
         ...log,
         completed_exercises: JSON.parse(log.completed_exercises || '[]'),
-      } : null,
+        stats: JSON.parse(log.stats || '{}'),
+      },
     });
   } catch (err) {
     console.error(err);
@@ -221,6 +233,47 @@ router.post('/log', (req, res) => {
     res.json({
       ...log,
       completed_exercises: JSON.parse(log.completed_exercises || '[]'),
+      stats: JSON.parse(log.stats || '{}'),
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/workouts/complete/:date - mark a workout as complete with stats
+router.post('/complete/:date', (req, res) => {
+  try {
+    const { date } = req.params;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
+    }
+
+    const { heart_rate_peak, heart_rate_avg, rpe, duration_minutes, notes } = req.body;
+    const stats = JSON.stringify({ heart_rate_peak, heart_rate_avg, rpe, duration_minutes, notes });
+
+    let log = db.prepare('SELECT * FROM workout_logs WHERE user_id = 1 AND date = ?').get(date);
+
+    if (!log) {
+      const user = db.prepare('SELECT * FROM users WHERE id = 1').get();
+      const completedCount = getCompletedCount(user.id);
+      const workoutType = WORKOUT_ROTATION[completedCount % 7];
+      db.prepare(
+        "INSERT INTO workout_logs (user_id, date, workout_type, status, completed_exercises, stats) VALUES (1, ?, ?, 'completed', '[]', ?)"
+      ).run(date, workoutType, stats);
+    } else {
+      db.prepare(`
+        UPDATE workout_logs
+        SET status = 'completed', stats = ?, updated_at = datetime('now')
+        WHERE user_id = 1 AND date = ?
+      `).run(stats, date);
+    }
+
+    const updated = db.prepare('SELECT * FROM workout_logs WHERE user_id = 1 AND date = ?').get(date);
+    res.json({
+      ...updated,
+      completed_exercises: JSON.parse(updated.completed_exercises || '[]'),
+      stats: JSON.parse(updated.stats || '{}'),
     });
   } catch (err) {
     console.error(err);
@@ -254,21 +307,15 @@ router.patch('/log/:date/exercise', (req, res) => {
       completedExercises = completedExercises.filter(id => id !== exerciseId);
     }
 
-    // Auto-update status
-    const user = db.prepare('SELECT * FROM users WHERE id = 1').get();
-    const dayIndex = getDateDayIndex(user.start_date, date);
-    const weekNumber = Math.min(getWeekNumber(dayIndex), 12);
-    const workoutMeta = getWorkoutMeta(log.workout_type, weekNumber, user.injury_mode === 1);
-    const totalExercises = workoutMeta.exercises.length;
-    const completedCount = completedExercises.length;
-
+    // Update status: in_progress if exercises checked, not_started if none
+    // Never auto-complete - only POST /complete/:date sets status to 'completed'
     let newStatus = log.status;
-    if (completedCount === 0) {
-      newStatus = 'not_started';
-    } else if (completedCount >= totalExercises) {
-      newStatus = 'completed';
-    } else {
-      newStatus = 'in_progress';
+    if (log.status !== 'completed') {
+      if (completedExercises.length === 0) {
+        newStatus = 'not_started';
+      } else {
+        newStatus = 'in_progress';
+      }
     }
 
     db.prepare(`
@@ -281,6 +328,7 @@ router.patch('/log/:date/exercise', (req, res) => {
     res.json({
       ...updated,
       completed_exercises: JSON.parse(updated.completed_exercises || '[]'),
+      stats: JSON.parse(updated.stats || '{}'),
     });
   } catch (err) {
     console.error(err);
@@ -288,7 +336,7 @@ router.patch('/log/:date/exercise', (req, res) => {
   }
 });
 
-function calculateStreak(userId, startDate, today) {
+function calculateStreak(userId, today) {
   const logs = db.prepare(
     "SELECT date, status FROM workout_logs WHERE user_id = ? AND status = 'completed' ORDER BY date DESC"
   ).all(userId);
@@ -297,7 +345,6 @@ function calculateStreak(userId, startDate, today) {
 
   const completedDates = new Set(logs.map(l => l.date));
   let streak = 0;
-  const current = new Date(today);
 
   // Allow today to not be completed yet and still keep streak
   // Start checking from yesterday if today not done

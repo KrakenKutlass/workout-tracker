@@ -52,6 +52,11 @@ db.exec(`
   );
 `);
 
+// Add stats column to workout_logs if it doesn't exist (migration)
+try {
+  db.exec(`ALTER TABLE workout_logs ADD COLUMN stats TEXT DEFAULT '{}'`);
+} catch(e) { /* column already exists */ }
+
 // Seed default user if none exists
 const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get();
 if (userCount.count === 0) {

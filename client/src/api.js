@@ -31,6 +31,10 @@ export const workoutsApi = {
     method: 'PATCH',
     body: JSON.stringify({ exerciseId, completed }),
   }),
+  completeWorkout: (date, stats) => request('/workouts/complete/' + date, {
+    method: 'POST',
+    body: JSON.stringify(stats),
+  }),
 };
 
 // Users API

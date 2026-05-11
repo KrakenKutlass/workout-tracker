@@ -1,10 +1,30 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, NavLink, useLocation } from 'react-router-dom';
 import Home from './pages/Home.jsx';
 import Workout from './pages/Workout.jsx';
 import Progress from './pages/Progress.jsx';
 import Settings from './pages/Settings.jsx';
 import InfoHub from './pages/InfoHub.jsx';
+
+export const ThemeContext = React.createContext();
+
+export function ThemeProvider({ children }) {
+  const [isDark, setIsDark] = useState(() => {
+    const saved = localStorage.getItem('theme');
+    return saved ? saved === 'dark' : true; // default dark
+  });
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', isDark);
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+  }, [isDark]);
+
+  return (
+    <ThemeContext.Provider value={{ isDark, toggleTheme: () => setIsDark(v => !v) }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+}
 
 const NAV_ITEMS = [
   { to: '/', label: 'Home', icon: HomeIcon },
@@ -64,7 +84,7 @@ function SettingsIcon() {
 
 function BottomNav() {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 safe-area-pb">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 safe-area-pb">
       <div className="max-w-lg mx-auto flex items-stretch">
         {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
           <NavLink
@@ -75,7 +95,7 @@ function BottomNav() {
               `flex-1 flex flex-col items-center justify-center py-2 px-1 text-xs font-medium transition-colors duration-150 ${
                 isActive
                   ? 'text-brand-600'
-                  : 'text-gray-400 hover:text-gray-600'
+                  : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
               }`
             }
           >
@@ -96,7 +116,7 @@ function BottomNav() {
 
 function Layout({ children }) {
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20">
       <div className="max-w-lg mx-auto">
         {children}
       </div>
@@ -107,19 +127,21 @@ function Layout({ children }) {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Layout>
-        <div className="page-enter">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/workout" element={<Workout />} />
-            <Route path="/workout/:date" element={<Workout />} />
-            <Route path="/progress" element={<Progress />} />
-            <Route path="/info" element={<InfoHub />} />
-            <Route path="/settings" element={<Settings />} />
-          </Routes>
-        </div>
-      </Layout>
-    </BrowserRouter>
+    <ThemeProvider>
+      <BrowserRouter>
+        <Layout>
+          <div className="page-enter">
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/workout" element={<Workout />} />
+              <Route path="/workout/:date" element={<Workout />} />
+              <Route path="/progress" element={<Progress />} />
+              <Route path="/info" element={<InfoHub />} />
+              <Route path="/settings" element={<Settings />} />
+            </Routes>
+          </div>
+        </Layout>
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }
