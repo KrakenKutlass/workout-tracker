@@ -1,4 +1,5 @@
 const { createClient } = require('@supabase/supabase-js');
+const ws = require('ws');
 require('dotenv').config();
 
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -8,6 +9,8 @@ if (!supabaseUrl || !supabaseKey) {
   console.warn('[Supabase] SUPABASE_URL or SUPABASE_SERVICE_KEY not set - DB calls will fail');
 }
 
-const supabase = createClient(supabaseUrl || 'http://localhost', supabaseKey || 'placeholder');
+const supabase = createClient(supabaseUrl || 'http://localhost', supabaseKey || 'placeholder', {
+  realtime: { transport: ws },
+});
 
 module.exports = supabase;
