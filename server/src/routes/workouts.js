@@ -19,13 +19,13 @@ router.get('/today', async (req, res) => {
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('*')
-      .eq('id', 1)
+      .eq('id', req.userId)
       .single();
     if (userError) throw new Error(userError.message);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const today = new Date().toISOString().split('T')[0];
-    const completedCount = await getCompletedCount(user.id);
+    const completedCount = await getCompletedCount(req.userId);
 
     if (completedCount >= 84) {
       return res.json({
@@ -44,7 +44,7 @@ router.get('/today', async (req, res) => {
     let { data: log, error: logError } = await supabase
       .from('workout_logs')
       .select('*')
-      .eq('user_id', 1)
+      .eq('user_id', req.userId)
       .eq('date', today)
       .maybeSingle();
     if (logError) throw new Error(logError.message);
@@ -53,7 +53,7 @@ router.get('/today', async (req, res) => {
       const { error: insertError } = await supabase
         .from('workout_logs')
         .upsert(
-          { user_id: 1, date: today, workout_type: workoutType, status: 'not_started', completed_exercises: [] },
+          { user_id: req.userId, date: today, workout_type: workoutType, status: 'not_started', completed_exercises: [] },
           { onConflict: 'user_id,date' }
         );
       if (insertError) throw new Error(insertError.message);
@@ -61,7 +61,7 @@ router.get('/today', async (req, res) => {
       const { data: newLog, error: newLogError } = await supabase
         .from('workout_logs')
         .select('*')
-        .eq('user_id', 1)
+        .eq('user_id', req.userId)
         .eq('date', today)
         .single();
       if (newLogError) throw new Error(newLogError.message);
@@ -69,7 +69,7 @@ router.get('/today', async (req, res) => {
     }
 
     // Calculate streak
-    const streak = await calculateStreak(user.id, today);
+    const streak = await calculateStreak(req.userId, today);
 
     res.json({
       today,
@@ -98,19 +98,19 @@ router.get('/progress', async (req, res) => {
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('*')
-      .eq('id', 1)
+      .eq('id', req.userId)
       .single();
     if (userError) throw new Error(userError.message);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const today = new Date().toISOString().split('T')[0];
-    const completedCount = await getCompletedCount(user.id);
+    const completedCount = await getCompletedCount(req.userId);
 
     // Get completed logs ordered by date
     const { data: completedLogs, error: logsError } = await supabase
       .from('workout_logs')
       .select('*')
-      .eq('user_id', 1)
+      .eq('user_id', req.userId)
       .eq('status', 'completed')
       .order('date', { ascending: true });
     if (logsError) throw new Error(logsError.message);
@@ -119,7 +119,7 @@ router.get('/progress', async (req, res) => {
     const { data: inProgressLog, error: inProgressError } = await supabase
       .from('workout_logs')
       .select('*')
-      .eq('user_id', 1)
+      .eq('user_id', req.userId)
       .eq('date', today)
       .eq('status', 'in_progress')
       .maybeSingle();
@@ -171,7 +171,7 @@ router.get('/progress', async (req, res) => {
       }
     }
 
-    const streak = await calculateStreak(user.id, today);
+    const streak = await calculateStreak(req.userId, today);
 
     res.json({
       grid,
@@ -199,7 +199,7 @@ router.get('/:date', async (req, res) => {
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('*')
-      .eq('id', 1)
+      .eq('id', req.userId)
       .single();
     if (userError) throw new Error(userError.message);
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -208,7 +208,7 @@ router.get('/:date', async (req, res) => {
     const { data: log, error: logError } = await supabase
       .from('workout_logs')
       .select('*')
-      .eq('user_id', 1)
+      .eq('user_id', req.userId)
       .eq('date', date)
       .maybeSingle();
     if (logError) throw new Error(logError.message);
@@ -221,7 +221,7 @@ router.get('/:date', async (req, res) => {
     const { data: completedLogs, error: completedLogsError } = await supabase
       .from('workout_logs')
       .select('*')
-      .eq('user_id', 1)
+      .eq('user_id', req.userId)
       .eq('status', 'completed')
       .order('date', { ascending: true });
     if (completedLogsError) throw new Error(completedLogsError.message);
@@ -229,7 +229,7 @@ router.get('/:date', async (req, res) => {
     const logIndex = completedLogs.findIndex(l => l.date === date);
 
     // Determine day index: if completed, use its position; else use completedCount
-    const completedCount = await getCompletedCount(user.id);
+    const completedCount = await getCompletedCount(req.userId);
     const dayIndex = logIndex >= 0 ? logIndex : completedCount;
 
     const weekNumber = Math.min(Math.floor(dayIndex / 7) + 1, 12);
@@ -272,7 +272,7 @@ router.post('/log', async (req, res) => {
       .from('workout_logs')
       .upsert(
         {
-          user_id: 1,
+          user_id: req.userId,
           date,
           workout_type,
           status,
@@ -286,7 +286,7 @@ router.post('/log', async (req, res) => {
     const { data: log, error: logError } = await supabase
       .from('workout_logs')
       .select('*')
-      .eq('user_id', 1)
+      .eq('user_id', req.userId)
       .eq('date', date)
       .single();
     if (logError) throw new Error(logError.message);
@@ -316,7 +316,7 @@ router.post('/complete/:date', async (req, res) => {
     const { data: existingLog, error: existingError } = await supabase
       .from('workout_logs')
       .select('*')
-      .eq('user_id', 1)
+      .eq('user_id', req.userId)
       .eq('date', date)
       .maybeSingle();
     if (existingError) throw new Error(existingError.message);
@@ -325,17 +325,17 @@ router.post('/complete/:date', async (req, res) => {
       const { data: user, error: userError } = await supabase
         .from('users')
         .select('*')
-        .eq('id', 1)
+        .eq('id', req.userId)
         .single();
       if (userError) throw new Error(userError.message);
 
-      const completedCount = await getCompletedCount(user.id);
+      const completedCount = await getCompletedCount(req.userId);
       const workoutType = WORKOUT_ROTATION[completedCount % 7];
 
       const { error: insertError } = await supabase
         .from('workout_logs')
         .insert({
-          user_id: 1,
+          user_id: req.userId,
           date,
           workout_type: workoutType,
           status: 'completed',
@@ -347,7 +347,7 @@ router.post('/complete/:date', async (req, res) => {
       const { error: updateError } = await supabase
         .from('workout_logs')
         .update({ status: 'completed', stats })
-        .eq('user_id', 1)
+        .eq('user_id', req.userId)
         .eq('date', date);
       if (updateError) throw new Error(updateError.message);
     }
@@ -355,7 +355,7 @@ router.post('/complete/:date', async (req, res) => {
     const { data: updated, error: updatedError } = await supabase
       .from('workout_logs')
       .select('*')
-      .eq('user_id', 1)
+      .eq('user_id', req.userId)
       .eq('date', date)
       .single();
     if (updatedError) throw new Error(updatedError.message);
@@ -384,7 +384,7 @@ router.patch('/log/:date/exercise', async (req, res) => {
     const { data: log, error: logError } = await supabase
       .from('workout_logs')
       .select('*')
-      .eq('user_id', 1)
+      .eq('user_id', req.userId)
       .eq('date', date)
       .maybeSingle();
     if (logError) throw new Error(logError.message);
@@ -417,14 +417,14 @@ router.patch('/log/:date/exercise', async (req, res) => {
     const { error: updateError } = await supabase
       .from('workout_logs')
       .update({ completed_exercises: completedExercises, status: newStatus })
-      .eq('user_id', 1)
+      .eq('user_id', req.userId)
       .eq('date', date);
     if (updateError) throw new Error(updateError.message);
 
     const { data: updated, error: updatedError } = await supabase
       .from('workout_logs')
       .select('*')
-      .eq('user_id', 1)
+      .eq('user_id', req.userId)
       .eq('date', date)
       .single();
     if (updatedError) throw new Error(updatedError.message);

@@ -56,7 +56,7 @@ router.get('/logs', async (req, res) => {
     const { data: logs, error } = await supabase
       .from('notification_logs')
       .select('*')
-      .eq('user_id', 1)
+      .eq('user_id', req.userId)
       .order('sent_at', { ascending: false })
       .limit(limit);
     if (error) throw new Error(error.message);
@@ -73,7 +73,7 @@ router.post('/test', async (req, res) => {
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('*')
-      .eq('id', 1)
+      .eq('id', req.userId)
       .single();
     if (userError) throw new Error(userError.message);
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -109,7 +109,7 @@ router.post('/trigger', async (req, res) => {
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('*')
-      .eq('id', 1)
+      .eq('id', req.userId)
       .single();
     if (userError) throw new Error(userError.message);
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -128,7 +128,7 @@ router.post('/reminder', async (req, res) => {
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('*')
-      .eq('id', 1)
+      .eq('id', req.userId)
       .single();
     if (userError) throw new Error(userError.message);
     if (!user) return res.status(404).json({ error: 'User not found' });

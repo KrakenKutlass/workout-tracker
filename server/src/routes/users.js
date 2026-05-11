@@ -9,7 +9,7 @@ router.get('/me', async (req, res) => {
     const { data: user, error } = await supabase
       .from('users')
       .select('*')
-      .eq('id', 1)
+      .eq('id', req.userId)
       .single();
     if (error) throw new Error(error.message);
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -32,7 +32,7 @@ router.patch('/me', async (req, res) => {
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('*')
-      .eq('id', 1)
+      .eq('id', req.userId)
       .single();
     if (userError) throw new Error(userError.message);
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -59,7 +59,7 @@ router.patch('/me', async (req, res) => {
         injury_mode: updatedInjuryMode,
         reminder_time: updatedReminderTime,
       })
-      .eq('id', 1)
+      .eq('id', req.userId)
       .select()
       .single();
     if (updateError) throw new Error(updateError.message);
@@ -87,26 +87,26 @@ router.post('/reset', async (req, res) => {
     const { error: updateError } = await supabase
       .from('users')
       .update({ start_date: today })
-      .eq('id', 1);
+      .eq('id', req.userId);
     if (updateError) throw new Error(updateError.message);
 
     // Clear all workout logs on reset
     const { error: deleteLogsError } = await supabase
       .from('workout_logs')
       .delete()
-      .eq('user_id', 1);
+      .eq('user_id', req.userId);
     if (deleteLogsError) throw new Error(deleteLogsError.message);
 
     const { error: deleteNotifsError } = await supabase
       .from('notification_logs')
       .delete()
-      .eq('user_id', 1);
+      .eq('user_id', req.userId);
     if (deleteNotifsError) throw new Error(deleteNotifsError.message);
 
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('*')
-      .eq('id', 1)
+      .eq('id', req.userId)
       .single();
     if (userError) throw new Error(userError.message);
 

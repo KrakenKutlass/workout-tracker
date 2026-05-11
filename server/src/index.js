@@ -7,6 +7,7 @@ const path = require('path');
 const workoutsRouter = require('./routes/workouts');
 const usersRouter = require('./routes/users');
 const notificationsRouter = require('./routes/notifications');
+const authMiddleware = require('./middleware/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -28,9 +29,9 @@ app.use((req, res, next) => {
 });
 
 // API Routes
-app.use('/api/workouts', workoutsRouter);
-app.use('/api/users', usersRouter);
-app.use('/api/notifications', notificationsRouter);
+app.use('/api/workouts', authMiddleware, workoutsRouter);
+app.use('/api/users', authMiddleware, usersRouter);
+app.use('/api/notifications', authMiddleware, notificationsRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {
