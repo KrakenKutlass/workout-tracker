@@ -22,6 +22,7 @@ export default function Workout() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [completing, setCompleting] = useState(false);
+  const autoTriggered = React.useRef(false);
 
   const targetDate = date || new Date().toISOString().split('T')[0];
 
@@ -54,7 +55,22 @@ export default function Workout() {
 
   useEffect(() => {
     load();
+    autoTriggered.current = false;
   }, [date]);
+
+  // Auto-show stats modal when every exercise is checked
+  useEffect(() => {
+    if (!data || showStatsModal || autoTriggered.current) return;
+    if (data.log?.status === 'completed') return;
+    const done = data.log?.completed_exercises?.length || 0;
+    const total = data.workout?.exercises?.length || 0;
+    const isToday = targetDate === new Date().toISOString().split('T')[0];
+    const isPast = targetDate < new Date().toISOString().split('T')[0];
+    if (total > 0 && done >= total && (isToday || isPast) && data.log?.status === 'in_progress') {
+      autoTriggered.current = true;
+      setShowStatsModal(true);
+    }
+  }, [data?.log?.completed_exercises]);
 
   const handleToggleExercise = async (exerciseId, completed) => {
     if (!data) return;
@@ -100,7 +116,32 @@ export default function Workout() {
     }
   };
 
-  const handleCompleteWorkout = () => {
+  const handleCompleteWorkout = async () => {
+    if (!data) return;
+    const allIds = data.workout?.exercises?.map(e => e.id) || [];
+    const alreadyDone = data.log?.completed_exercises || [];
+    const missing = allIds.filter(id => !alreadyDone.includes(id));
+
+    if (missing.length > 0) {
+      // Optimistically tick all exercises in UI
+      setData(prev => ({
+        ...prev,
+        log: { ...prev.log, completed_exercises: allIds, status: 'in_progress' },
+      }));
+      // Persist the full list in one request
+      try {
+        await workoutsApi.logWorkout({
+          date: targetDate,
+          workout_type: data.workoutType,
+          status: 'in_progress',
+          completed_exercises: allIds,
+        });
+      } catch (err) {
+        console.error('Error marking all exercises done:', err);
+      }
+    }
+
+    autoTriggered.current = true;
     setShowStatsModal(true);
   };
 
@@ -158,7 +199,7 @@ export default function Workout() {
       {/* Stats Modal */}
       <StatsModal
         isOpen={showStatsModal}
-        onClose={() => setShowStatsModal(false)}
+        onClose={() => { setShowStatsModal(false); autoTriggered.current = false; }}
         onSubmit={handleStatsSubmit}
         loading={completing}
       />
@@ -261,9 +302,13 @@ export default function Workout() {
         {log?.status === 'in_progress' && (isToday || isPast) && (
           <button
             onClick={handleCompleteWorkout}
-            className="btn-primary w-full bg-green-600 hover:bg-green-700 active:bg-green-800"
+            className="btn-primary w-full bg-green-600 hover:bg-green-700 active:bg-green-800 flex items-center justify-center gap-2"
           >
-            Daily Workout Complete! 🎉
+            <span>
+              {completedCount < totalExercises
+                ? `Tick All & Complete (${completedCount}/${totalExercises} done) 🎉`
+                : 'Daily Workout Complete! 🎉'}
+            </span>
           </button>
         )}
 
