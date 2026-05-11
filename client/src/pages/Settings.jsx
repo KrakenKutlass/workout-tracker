@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { usersApi, notificationsApi } from '../api.js';
+import { ThemeContext } from '../App.jsx';
 import LoadingSpinner from '../components/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ErrorMessage.jsx';
 
@@ -25,6 +26,7 @@ function Toggle({ checked, onChange, disabled }) {
 }
 
 export default function Settings() {
+  const { isDark, toggleTheme } = useContext(ThemeContext);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -137,8 +139,8 @@ export default function Settings() {
   return (
     <div className="px-4 pt-6 pb-4 space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-        <p className="text-sm text-gray-500 mt-1">Manage your preferences</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Settings</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage your preferences</p>
       </div>
 
       {/* Save message */}
@@ -150,13 +152,25 @@ export default function Settings() {
         </div>
       )}
 
+      {/* Appearance */}
+      <div className="card">
+        <h2 className="font-semibold text-gray-900 dark:text-gray-100 mb-4">Appearance</h2>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Dark Mode</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Default is dark. Toggle for light mode.</p>
+          </div>
+          <Toggle checked={isDark} onChange={toggleTheme} />
+        </div>
+      </div>
+
       {/* Injury Mode - prominent */}
-      <div className="card border-2 border-yellow-200 bg-yellow-50">
+      <div className="card border-2 border-yellow-200 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/30">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
               <span className="text-xl">⚠️</span>
-              <h2 className="font-bold text-gray-900">Flare-up Mode</h2>
+              <h2 className="font-bold text-gray-900 dark:text-gray-100">Flare-up Mode</h2>
             </div>
             <p className="text-sm text-gray-600 leading-relaxed">
               When active, all lower body loading is removed from Workout B.
@@ -176,7 +190,7 @@ export default function Settings() {
       {/* Profile settings */}
       <form onSubmit={handleSave} className="space-y-4">
         <div className="card">
-          <h2 className="font-semibold text-gray-800 mb-4">Profile</h2>
+          <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-4">Profile</h2>
           <div className="space-y-3">
             <div>
               <label className="label">Name</label>
@@ -212,7 +226,7 @@ export default function Settings() {
         </div>
 
         <div className="card">
-          <h2 className="font-semibold text-gray-800 mb-4">Program Settings</h2>
+          <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-4">Program Settings</h2>
           <div className="space-y-3">
             <div>
               <label className="label">Program Start Date</label>

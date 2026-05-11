@@ -39,28 +39,28 @@ export default function Progress() {
     <div className="px-4 pt-6 pb-4 space-y-5">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Progress</h1>
-        <p className="text-sm text-gray-500 mt-1">Your 12-week journey</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Progress</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Your 12-week journey</p>
       </div>
 
       {/* Stats row */}
       <div className="grid grid-cols-2 gap-3">
         <div className="card">
           <p className="text-3xl font-bold text-green-600">{data.completedCount}</p>
-          <p className="text-xs text-gray-500 mt-0.5">Workouts Completed</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Workouts Completed</p>
           <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
             <div
               className="h-full bg-green-500 rounded-full"
               style={{ width: `${completionRate}%` }}
             />
           </div>
-          <p className="text-xs text-gray-400 mt-1">{completionRate}% completion rate</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{completionRate}% completion rate</p>
         </div>
         <div className="card">
           <p className="text-3xl font-bold text-red-500">{data.missedCount}</p>
-          <p className="text-xs text-gray-500 mt-0.5">Missed Days</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Missed Days</p>
           <div className="mt-2">
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-gray-400 dark:text-gray-500">
               {data.totalDays} days into program
             </p>
           </div>
@@ -109,7 +109,7 @@ export default function Progress() {
 
       {/* 12-week grid */}
       <div className="card">
-        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">
+        <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">
           12-Week Overview
         </h2>
         <ProgressGrid grid={data.grid} currentWeek={data.currentWeek} />
@@ -117,7 +117,7 @@ export default function Progress() {
 
       {/* Phase breakdown */}
       <div className="card">
-        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+        <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
           Phase Breakdown
         </h2>
         <div className="space-y-3">
@@ -136,10 +136,10 @@ export default function Progress() {
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
                     <div className={`w-2 h-2 rounded-full ${color}`}/>
-                    <span className="text-sm font-medium text-gray-700">{label}</span>
-                    <span className="text-xs text-gray-400">Weeks {weeks}</span>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500">Weeks {weeks}</span>
                   </div>
-                  <span className="text-xs text-gray-500">{phaseCompleted}/28 days</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">{phaseCompleted}/28 days</span>
                 </div>
                 <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                   <div

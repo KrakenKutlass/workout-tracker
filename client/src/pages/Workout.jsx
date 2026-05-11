@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { workoutsApi } from '../api.js';
 import ExerciseCard from '../components/ExerciseCard.jsx';
+import StatsModal from '../components/StatsModal.jsx';
 import LoadingSpinner from '../components/LoadingSpinner.jsx';
 import ErrorMessage from '../components/ErrorMessage.jsx';
 
@@ -19,6 +20,8 @@ export default function Workout() {
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [showStatsModal, setShowStatsModal] = useState(false);
+  const [completing, setCompleting] = useState(false);
 
   const targetDate = date || new Date().toISOString().split('T')[0];
 
@@ -74,12 +77,7 @@ export default function Workout() {
           completed_exercises: updated.completed_exercises,
         },
       }));
-
-      // Show confetti on completion
-      if (updated.status === 'completed' && data.log?.status !== 'completed') {
-        setShowConfetti(true);
-        setTimeout(() => setShowConfetti(false), 3000);
-      }
+      // No auto-completion - only the complete button triggers completion
     } catch (err) {
       console.error('Toggle exercise error:', err);
     } finally {
@@ -99,6 +97,34 @@ export default function Workout() {
       await load();
     } catch (err) {
       console.error('Start workout error:', err);
+    }
+  };
+
+  const handleCompleteWorkout = () => {
+    setShowStatsModal(true);
+  };
+
+  const handleStatsSubmit = async (stats) => {
+    setCompleting(true);
+    try {
+      const updated = await workoutsApi.completeWorkout(targetDate, stats);
+      setData(prev => ({
+        ...prev,
+        log: {
+          ...updated,
+          completed_exercises: updated.completed_exercises,
+        },
+      }));
+      setShowStatsModal(false);
+      setShowConfetti(true);
+      setTimeout(() => {
+        setShowConfetti(false);
+        navigate('/');
+      }, 2000);
+    } catch (err) {
+      console.error('Complete workout error:', err);
+    } finally {
+      setCompleting(false);
     }
   };
 
@@ -129,11 +155,19 @@ export default function Workout() {
 
   return (
     <div className="pb-4">
+      {/* Stats Modal */}
+      <StatsModal
+        isOpen={showStatsModal}
+        onClose={() => setShowStatsModal(false)}
+        onSubmit={handleStatsSubmit}
+        loading={completing}
+      />
+
       {/* Header */}
       <div className={`bg-gradient-to-br ${gradient} px-4 pt-6 pb-6 relative overflow-hidden`}>
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-1 text-white/70 hover:text-white text-sm mb-4 transition-colors"
+          className="flex items-center gap-1 text-white/70 dark:text-white/70 hover:text-white text-sm mb-4 transition-colors"
         >
           ← Back
         </button>
@@ -208,9 +242,9 @@ export default function Workout() {
       <div className="px-4 pt-4 space-y-3">
         {/* Circuit instruction */}
         {workout.circuit && (
-          <div className="bg-orange-50 border border-orange-200 rounded-xl p-3">
-            <p className="text-sm font-semibold text-orange-800">Circuit Training</p>
-            <p className="text-xs text-orange-600 mt-0.5">
+          <div className="bg-orange-50 dark:bg-gray-700 border border-orange-200 dark:border-gray-600 rounded-xl p-3">
+            <p className="text-sm font-semibold text-orange-800 dark:text-orange-300">Circuit Training</p>
+            <p className="text-xs text-orange-600 dark:text-orange-300 mt-0.5">
               Complete all exercises in sequence for 1 round, rest {workout.restBetweenRounds}s between rounds. Do {workout.rounds} rounds total.
             </p>
           </div>
@@ -220,6 +254,16 @@ export default function Workout() {
         {log?.status === 'not_started' && isToday && (
           <button onClick={handleStartWorkout} className="btn-primary w-full">
             Start Workout →
+          </button>
+        )}
+
+        {/* Daily Workout Complete button - shows when in_progress */}
+        {log?.status === 'in_progress' && (isToday || isPast) && (
+          <button
+            onClick={handleCompleteWorkout}
+            className="btn-primary w-full bg-green-600 hover:bg-green-700 active:bg-green-800"
+          >
+            Daily Workout Complete! 🎉
           </button>
         )}
 
@@ -258,15 +302,15 @@ export default function Workout() {
           ))}
         </div>
 
-        {/* Notes area (future enhancement placeholder) */}
+        {/* Notes area */}
         {(isToday || isPast) && log?.status !== 'not_started' && (
           <div className="card">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">How did it feel?</p>
-            <div className="flex gap-2">
+            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">How did it feel?</p>
+            <div className="flex gap-2 flex-wrap">
               {['💪 Strong', '😤 Tough', '😅 Hard', '🔥 Crushed it'].map(label => (
                 <button
                   key={label}
-                  className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-1.5 rounded-full transition-colors"
+                  className="text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-2.5 py-1.5 rounded-full transition-colors"
                 >
                   {label}
                 </button>

@@ -52,8 +52,8 @@ export default function Home() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm text-gray-500">{today}</p>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <p className="text-sm text-gray-500 dark:text-gray-400">{today}</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
             Hey, {user?.name || 'Champ'} 👋
           </h1>
         </div>
@@ -107,7 +107,7 @@ export default function Home() {
 
       {/* Today's workout */}
       <div>
-        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Today's Workout</h2>
+        <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Today's Workout</h2>
         {data.workout ? (
           <WorkoutCard
             workout={data.workout}
@@ -126,15 +126,15 @@ export default function Home() {
       <div className="grid grid-cols-3 gap-3">
         <div className="card text-center p-3">
           <p className="text-2xl font-bold text-brand-600">{data.streak || 0}</p>
-          <p className="text-xs text-gray-500 mt-0.5">Day Streak</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Day Streak</p>
         </div>
         <div className="card text-center p-3">
           <p className="text-2xl font-bold text-green-600">{data.weekNumber}</p>
-          <p className="text-xs text-gray-500 mt-0.5">Current Week</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Current Week</p>
         </div>
         <div className="card text-center p-3">
           <p className="text-2xl font-bold text-purple-600">{84 - (data.programDay - 1)}</p>
-          <p className="text-xs text-gray-500 mt-0.5">Days Left</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Days Left</p>
         </div>
       </div>
 
@@ -159,8 +159,8 @@ export default function Home() {
         >
           <span className="text-2xl">📊</span>
           <div className="text-left">
-            <p className="text-sm font-semibold text-gray-800">Progress</p>
-            <p className="text-xs text-gray-500">12-week overview</p>
+            <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">Progress</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">12-week overview</p>
           </div>
         </button>
         <button
@@ -169,8 +169,8 @@ export default function Home() {
         >
           <span className="text-2xl">📖</span>
           <div className="text-left">
-            <p className="text-sm font-semibold text-gray-800">Info Hub</p>
-            <p className="text-xs text-gray-500">Rehab guidance</p>
+            <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">Info Hub</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Rehab guidance</p>
           </div>
         </button>
       </div>
