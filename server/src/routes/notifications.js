@@ -14,6 +14,41 @@ function getDayIndex(startDate) {
   return Math.floor(diffMs / (1000 * 60 * 60 * 24));
 }
 
+// GET /api/notifications/config-status - check which credentials are configured
+router.get('/config-status', (req, res) => {
+  const emailUser = process.env.NODEMAILER_USER;
+  const emailPass = process.env.NODEMAILER_PASS;
+  const twilioSid = process.env.TWILIO_ACCOUNT_SID;
+  const twilioToken = process.env.TWILIO_AUTH_TOKEN;
+  const twilioFrom = process.env.TWILIO_FROM;
+
+  const emailConfigured = !!(emailUser && emailPass &&
+    emailUser !== 'placeholder@gmail.com' &&
+    emailPass !== 'placeholder_password');
+
+  const smsConfigured = !!(twilioSid && twilioToken && twilioFrom &&
+    !twilioSid.startsWith('ACplaceholder') &&
+    twilioToken !== 'placeholder_auth_token_00000000000000');
+
+  res.json({
+    email: {
+      configured: emailConfigured,
+      missing: emailConfigured ? [] : [
+        !emailUser || emailUser === 'placeholder@gmail.com' ? 'NODEMAILER_USER' : null,
+        !emailPass || emailPass === 'placeholder_password' ? 'NODEMAILER_PASS' : null,
+      ].filter(Boolean),
+    },
+    sms: {
+      configured: smsConfigured,
+      missing: smsConfigured ? [] : [
+        !twilioSid || twilioSid.startsWith('ACplaceholder') ? 'TWILIO_ACCOUNT_SID' : null,
+        !twilioToken || twilioToken === 'placeholder_auth_token_00000000000000' ? 'TWILIO_AUTH_TOKEN' : null,
+        !twilioFrom || twilioFrom === '+15005550006' ? 'TWILIO_FROM' : null,
+      ].filter(Boolean),
+    },
+  });
+});
+
 // GET /api/notifications/logs - get notification history
 router.get('/logs', (req, res) => {
   try {

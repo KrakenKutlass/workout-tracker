@@ -50,6 +50,7 @@ export const usersApi = {
 // Notifications API
 export const notificationsApi = {
   getLogs: (limit = 20) => request(`/notifications/logs?limit=${limit}`),
+  getConfigStatus: () => request('/notifications/config-status'),
   sendTest: (type = 'both') => request('/notifications/test', {
     method: 'POST',
     body: JSON.stringify({ type }),
