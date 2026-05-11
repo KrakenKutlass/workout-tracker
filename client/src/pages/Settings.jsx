@@ -302,7 +302,7 @@ export default function Settings() {
       {/* Notification logs */}
       {notifLogs.length > 0 && (
         <div className="card">
-          <h2 className="font-semibold text-gray-800 mb-3">Recent Notifications</h2>
+          <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Recent Notifications</h2>
           <div className="space-y-2">
             {notifLogs.map(log => (
               <div key={log.id} className="flex items-center justify-between text-sm">
@@ -310,9 +310,9 @@ export default function Settings() {
                   <span className={`badge ${log.type === 'email' ? 'badge-blue' : 'badge-green'}`}>
                     {log.type}
                   </span>
-                  <span className="text-gray-600">{log.date}</span>
+                  <span className="text-gray-600 dark:text-gray-400">{log.date}</span>
                 </div>
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-gray-400 dark:text-gray-500">
                   {new Date(log.sent_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>

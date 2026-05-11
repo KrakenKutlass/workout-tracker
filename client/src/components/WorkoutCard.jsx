@@ -14,9 +14,9 @@ const WORKOUT_ICONS = {
 };
 
 const STATUS_STYLES = {
-  not_started: { bg: 'bg-gray-100', text: 'text-gray-600', label: 'Not Started' },
-  in_progress: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'In Progress' },
-  completed: { bg: 'bg-green-100', text: 'text-green-700', label: 'Completed ✓' },
+  not_started: { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-600 dark:text-gray-300', label: 'Not Started' },
+  in_progress: { bg: 'bg-yellow-100 dark:bg-yellow-800', text: 'text-yellow-700 dark:text-yellow-200', label: 'In Progress' },
+  completed: { bg: 'bg-green-100 dark:bg-green-800', text: 'text-green-700 dark:text-green-200', label: 'Completed ✓' },
 };
 
 export default function WorkoutCard({ workout, log, streak, date }) {

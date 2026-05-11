@@ -6,7 +6,7 @@ const STATUS_STYLES = {
   in_progress: 'bg-yellow-400 text-white',
   not_started: 'bg-gray-200 text-gray-500 ring-2 ring-brand-400 ring-offset-1',
   missed: 'bg-red-200 text-red-600',
-  future: 'bg-gray-100 text-gray-300',
+  future: 'bg-gray-100 dark:bg-gray-700 text-gray-300 dark:text-gray-600',
 };
 
 const STATUS_LABELS = {
@@ -45,7 +45,7 @@ export default function ProgressGrid({ grid = [], currentWeek = 1 }) {
         {Object.entries(STATUS_LABELS).map(([status, label]) => (
           <div key={status} className="flex items-center gap-1.5">
             <div className={`w-3 h-3 rounded-sm ${STATUS_STYLES[status].split(' ')[0]}`}/>
-            <span className="text-gray-600">{label}</span>
+            <span className="text-gray-600 dark:text-gray-400">{label}</span>
           </div>
         ))}
       </div>
@@ -55,7 +55,7 @@ export default function ProgressGrid({ grid = [], currentWeek = 1 }) {
         {Object.entries(WORKOUT_COLORS).map(([type, color]) => (
           <div key={type} className="flex items-center gap-1.5">
             <div className={`w-1.5 h-3 rounded-full ${color}`}/>
-            <span className="text-gray-600">Workout {type}</span>
+            <span className="text-gray-600 dark:text-gray-400">Workout {type}</span>
           </div>
         ))}
       </div>
@@ -73,9 +73,9 @@ export default function ProgressGrid({ grid = [], currentWeek = 1 }) {
         const weekNum = wi + 1;
         const isCurrentWeek = weekNum === currentWeek;
         return (
-          <div key={wi} className={`grid grid-cols-8 gap-1 items-center ${isCurrentWeek ? 'rounded-lg bg-brand-50 py-1 px-0.5' : ''}`}>
+          <div key={wi} className={`grid grid-cols-8 gap-1 items-center ${isCurrentWeek ? 'rounded-lg bg-brand-50 dark:bg-gray-800 py-1 px-0.5' : ''}`}>
             {/* Week number */}
-            <div className={`text-center text-xs font-semibold ${isCurrentWeek ? 'text-brand-600' : 'text-gray-400'}`}>
+            <div className={`text-center text-xs font-semibold ${isCurrentWeek ? 'text-brand-600' : 'text-gray-400 dark:text-gray-500'}`}>
               {weekNum}
             </div>
             {/* Days */}

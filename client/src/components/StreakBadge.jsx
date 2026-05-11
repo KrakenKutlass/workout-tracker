@@ -9,11 +9,11 @@ export default function StreakBadge({ streak, size = 'md' }) {
   const s = sizes[size] || sizes.md;
 
   const getStreakColor = () => {
-    if (streak === 0) return 'bg-gray-100 text-gray-600';
-    if (streak < 3) return 'bg-blue-100 text-blue-700';
-    if (streak < 7) return 'bg-orange-100 text-orange-700';
-    if (streak < 14) return 'bg-red-100 text-red-700';
-    return 'bg-purple-100 text-purple-700';
+    if (streak === 0) return 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300';
+    if (streak < 3) return 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300';
+    if (streak < 7) return 'bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300';
+    if (streak < 14) return 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300';
+    return 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300';
   };
 
   const getEmoji = () => {

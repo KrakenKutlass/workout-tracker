@@ -44,7 +44,7 @@ function TimerDisplay({ seconds, isActive, onComplete }) {
             className="transition-all duration-1000"
           />
         </svg>
-        <span className={`absolute inset-0 flex items-center justify-center text-sm font-bold ${remaining === 0 ? 'text-green-600' : isActive ? 'text-brand-600 timer-active' : 'text-gray-700'}`}>
+        <span className={`absolute inset-0 flex items-center justify-center text-sm font-bold ${remaining === 0 ? 'text-green-600' : isActive ? 'text-brand-600 timer-active' : 'text-gray-700 dark:text-gray-100'}`}>
           {remaining === 0 ? '✓' : `${remaining}s`}
         </span>
       </div>
@@ -79,7 +79,7 @@ export default function ExerciseCard({ exercise, completed, onToggle, index, isC
   };
 
   return (
-    <div className={`card transition-all duration-200 ${completed ? 'border-green-200 bg-green-50' : 'border-gray-100'}`}>
+    <div className={`card transition-all duration-200 ${completed ? 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/30' : 'border-gray-100'}`}>
       <div className="flex items-start gap-3">
         {/* Checkbox / number */}
         <button
@@ -87,7 +87,7 @@ export default function ExerciseCard({ exercise, completed, onToggle, index, isC
           className={`flex-shrink-0 w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all duration-150 font-semibold text-sm mt-0.5 ${
             completed
               ? 'bg-green-500 border-green-500 text-white'
-              : 'border-gray-300 text-gray-400 hover:border-brand-400 hover:text-brand-400'
+              : 'border-gray-300 dark:border-gray-500 text-gray-400 dark:text-gray-500 hover:border-brand-400 hover:text-brand-400'
           }`}
         >
           {completed ? '✓' : index + 1}
@@ -97,7 +97,7 @@ export default function ExerciseCard({ exercise, completed, onToggle, index, isC
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <h3 className={`font-semibold text-sm leading-tight ${completed ? 'text-green-800 line-through' : 'text-gray-900'}`}>
+              <h3 className={`font-semibold text-sm leading-tight ${completed ? 'text-green-800 dark:text-green-300 line-through' : 'text-gray-900 dark:text-gray-100'}`}>
                 {exercise.name}
               </h3>
               <div className="flex flex-wrap gap-1.5 mt-1">
@@ -121,14 +121,14 @@ export default function ExerciseCard({ exercise, completed, onToggle, index, isC
           </div>
 
           {/* Description */}
-          <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">{exercise.description}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed">{exercise.description}</p>
 
           {/* Cues toggle */}
           {exercise.cues && exercise.cues.length > 0 && (
             <div className="mt-2">
               <button
                 onClick={() => setShowCues(v => !v)}
-                className="text-xs text-brand-600 font-medium flex items-center gap-1 hover:text-brand-700"
+                className="text-xs text-brand-600 dark:text-brand-400 font-medium flex items-center gap-1 hover:text-brand-700"
               >
                 <svg viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
                   <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 13A6 6 0 118 2a6 6 0 010 12zm-.75-4.5v-3h1.5v3h-1.5zm0-4.5v-1.5h1.5V5h-1.5z"/>
@@ -138,7 +138,7 @@ export default function ExerciseCard({ exercise, completed, onToggle, index, isC
               {showCues && (
                 <ul className="mt-1.5 space-y-1">
                   {exercise.cues.map((cue, i) => (
-                    <li key={i} className="text-xs text-gray-600 flex items-start gap-1.5">
+                    <li key={i} className="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1.5">
                       <span className="text-brand-400 mt-0.5">▸</span>
                       {cue}
                     </li>
