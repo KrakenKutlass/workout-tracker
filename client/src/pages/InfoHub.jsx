@@ -230,15 +230,15 @@ const INFO_SECTIONS = [
 function ContentBlock({ block }) {
   switch (block.type) {
     case 'text':
-      return <p className="text-sm text-gray-600 leading-relaxed">{block.text}</p>;
+      return <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{block.text}</p>;
 
     case 'feature-list':
       return (
         <div>
-          {block.title && <p className="text-sm font-semibold text-gray-700 mb-2">{block.title}</p>}
+          {block.title && <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">{block.title}</p>}
           <ul className="space-y-1.5">
             {block.items.map((item, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
+              <li key={i} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300">
                 <span className="text-brand-500 mt-0.5 flex-shrink-0">▸</span>
                 {item}
               </li>
@@ -268,7 +268,7 @@ function ContentBlock({ block }) {
               <span className={`badge ${d.color} flex-shrink-0`}>
                 {d.workout}
               </span>
-              <span className="text-sm text-gray-600">{d.label}</span>
+              <span className="text-sm text-gray-600 dark:text-gray-300">{d.label}</span>
             </div>
           ))}
         </div>
@@ -281,14 +281,14 @@ function ContentBlock({ block }) {
             <div key={i} className={`rounded-xl border-2 p-3 ${phase.color}`}>
               <div className="flex items-center justify-between mb-1">
                 <h4 className={`font-bold text-sm ${phase.headerColor}`}>{phase.name}</h4>
-                <span className="text-xs text-gray-500">{phase.weeks}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">{phase.weeks}</span>
               </div>
-              <p className="text-xs text-gray-600 mb-2">{phase.description}</p>
+              <p className="text-xs text-gray-600 dark:text-gray-300 mb-2">{phase.description}</p>
               <ul className="space-y-1">
                 {phase.keyPoints.map((point, j) => (
                   <li key={j} className={`text-xs flex items-start gap-1.5 ${phase.headerColor}`}>
                     <span className="mt-0.5 flex-shrink-0">•</span>
-                    <span className="text-gray-600">{point}</span>
+                    <span className="text-gray-600 dark:text-gray-300">{point}</span>
                   </li>
                 ))}
               </ul>
@@ -302,8 +302,8 @@ function ContentBlock({ block }) {
         <div className="space-y-3">
           {block.items.map((item, i) => (
             <div key={i} className="border-l-2 border-brand-300 pl-3">
-              <p className="text-sm font-semibold text-gray-800">{item.title}</p>
-              <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">{item.description}</p>
+              <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">{item.title}</p>
+              <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5 leading-relaxed">{item.description}</p>
             </div>
           ))}
         </div>
@@ -314,7 +314,7 @@ function ContentBlock({ block }) {
         <div className="space-y-3">
           {block.items.map((quote, i) => (
             <blockquote key={i} className="bg-gray-50 rounded-xl p-3 border-l-4 border-brand-400">
-              <p className="text-sm font-medium text-gray-700 italic">"{quote.text}"</p>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 italic">"{quote.text}"</p>
               <p className="text-xs text-gray-400 mt-1">— {quote.author}</p>
             </blockquote>
           ))}
@@ -337,7 +337,7 @@ function AccordionSection({ section }) {
       >
         <div className="flex items-center gap-3">
           <span className="text-2xl">{section.icon}</span>
-          <h2 className="font-semibold text-gray-800">{section.title}</h2>
+          <h2 className="font-semibold text-gray-800 dark:text-gray-100">{section.title}</h2>
         </div>
         <span className={`text-gray-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>
           ▼
@@ -345,7 +345,7 @@ function AccordionSection({ section }) {
       </button>
 
       {open && (
-        <div className="mt-4 space-y-4 border-t border-gray-100 pt-4">
+        <div className="mt-4 space-y-4 border-t border-gray-100 dark:border-gray-700 pt-4">
           {section.content.map((block, i) => (
             <ContentBlock key={i} block={block} />
           ))}
@@ -360,8 +360,8 @@ export default function InfoHub() {
     <div className="px-4 pt-6 pb-4 space-y-4">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Info Hub</h1>
-        <p className="text-sm text-gray-500 mt-1">Rehab guidance, protocol & motivation</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Info Hub</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Rehab guidance, protocol & motivation</p>
       </div>
 
       {/* Quick tips banner */}

@@ -71,12 +71,12 @@ export default function Progress() {
       <div className="card flex items-center gap-4">
         <StreakBadge streak={data.streak} size="lg" />
         <div>
-          <p className="font-semibold text-gray-800">
+          <p className="font-semibold text-gray-800 dark:text-gray-100">
             {data.streak === 0
               ? 'No active streak'
               : `${data.streak} day${data.streak !== 1 ? 's' : ''} in a row!`}
           </p>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
             {data.streak === 0
               ? 'Complete today\'s workout to start your streak'
               : data.streak >= 7

@@ -104,7 +104,7 @@ export default function ExerciseCard({ exercise, completed, onToggle, index, isC
                 <span className="badge badge-blue">{exercise.sets} {exercise.sets === 1 && isCircuit ? 'round' : 'sets'}</span>
                 <span className="badge badge-purple">{exercise.reps}</span>
                 {exercise.restSeconds && (
-                  <span className="badge bg-gray-100 text-gray-600">{exercise.restSeconds}s rest</span>
+                  <span className="badge bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{exercise.restSeconds}s rest</span>
                 )}
               </div>
             </div>

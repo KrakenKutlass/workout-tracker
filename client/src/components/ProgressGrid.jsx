@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 const STATUS_STYLES = {
   completed: 'bg-green-500 text-white',
   in_progress: 'bg-yellow-400 text-white',
-  not_started: 'bg-gray-200 text-gray-500 ring-2 ring-brand-400 ring-offset-1',
+  not_started: 'bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-200 ring-2 ring-brand-400 ring-offset-1 dark:ring-offset-gray-800',
   missed: 'bg-red-200 text-red-600',
   future: 'bg-gray-100 dark:bg-gray-700 text-gray-300 dark:text-gray-600',
 };

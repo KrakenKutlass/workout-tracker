@@ -117,7 +117,7 @@ export default function Home() {
           />
         ) : (
           <div className="card text-center py-8">
-            <p className="text-gray-500">Program complete or not started</p>
+            <p className="text-gray-500 dark:text-gray-400">Program complete or not started</p>
           </div>
         )}
       </div>
@@ -144,7 +144,7 @@ export default function Home() {
           <span className={`font-semibold text-sm ${phase.color.split(' ')[0]}`}>
             {phase.label} Phase
           </span>
-          <span className="text-xs text-gray-500">Weeks {
+          <span className="text-xs text-gray-500 dark:text-gray-400">Weeks {
             data.phase === 'foundation' ? '1-4' : data.phase === 'strength' ? '5-8' : '9-12'
           }</span>
         </div>

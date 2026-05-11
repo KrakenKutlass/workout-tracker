@@ -172,7 +172,7 @@ export default function Settings() {
               <span className="text-xl">⚠️</span>
               <h2 className="font-bold text-gray-900 dark:text-gray-100">Flare-up Mode</h2>
             </div>
-            <p className="text-sm text-gray-600 leading-relaxed">
+            <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
               When active, all lower body loading is removed from Workout B.
               Exercises are replaced with isometric rehab movements and upper body work
               to allow recovery while staying active.
@@ -324,7 +324,7 @@ export default function Settings() {
       {/* Danger zone */}
       <div className="card border border-red-200">
         <h2 className="font-semibold text-red-700 mb-1">Danger Zone</h2>
-        <p className="text-xs text-gray-500 mb-3">
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
           Reset the entire program. This will delete all workout logs and start fresh from today.
         </p>
         {!showResetConfirm ? (

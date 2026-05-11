@@ -137,7 +137,7 @@ export default function Workout() {
     return (
       <div className="px-4 pt-6">
         <div className="card text-center py-12">
-          <p className="text-gray-500">No workout scheduled for this date</p>
+          <p className="text-gray-500 dark:text-gray-400">No workout scheduled for this date</p>
           <button onClick={() => navigate('/')} className="btn-primary mt-4">Back to Home</button>
         </div>
       </div>
@@ -269,7 +269,7 @@ export default function Workout() {
 
         {/* Saving indicator */}
         {saving && (
-          <div className="flex items-center justify-center gap-2 text-sm text-gray-500 py-1">
+          <div className="flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400 py-1">
             <div className="w-4 h-4 border-2 border-brand-200 border-t-brand-600 rounded-full animate-spin"/>
             Saving...
           </div>
