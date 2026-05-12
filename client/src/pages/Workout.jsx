@@ -24,7 +24,8 @@ export default function Workout() {
   const [completing, setCompleting] = useState(false);
   const autoTriggered = React.useRef(false);
 
-  const targetDate = date || new Date().toISOString().split('T')[0];
+  // Use server-supplied date (timezone-aware) once loaded; fall back to URL param or UTC
+  const targetDate = data?.today || date || new Date().toISOString().split('T')[0];
 
   const load = async () => {
     try {
@@ -64,9 +65,7 @@ export default function Workout() {
     if (data.log?.status === 'completed') return;
     const done = data.log?.completed_exercises?.length || 0;
     const total = data.workout?.exercises?.length || 0;
-    const isToday = targetDate === new Date().toISOString().split('T')[0];
-    const isPast = targetDate < new Date().toISOString().split('T')[0];
-    if (total > 0 && done >= total && (isToday || isPast) && data.log?.status === 'in_progress') {
+    if (total > 0 && done >= total && data.log?.status === 'in_progress') {
       autoTriggered.current = true;
       setShowStatsModal(true);
     }
@@ -191,8 +190,10 @@ export default function Workout() {
   const progress = totalExercises > 0 ? (completedCount / totalExercises) * 100 : 0;
   const isCompleted = log?.status === 'completed';
   const gradient = WORKOUT_GRADIENTS[workout.type] || 'from-gray-500 to-gray-700';
-  const isToday = targetDate === new Date().toISOString().split('T')[0];
-  const isPast = targetDate < new Date().toISOString().split('T')[0];
+  // Use server-supplied today (timezone-aware) for date comparisons, not client UTC
+  const serverToday = data.today;
+  const isToday = targetDate === serverToday;
+  const isPast = targetDate < serverToday;
 
   return (
     <div className="pb-4">

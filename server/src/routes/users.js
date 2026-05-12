@@ -3,6 +3,31 @@ const router = express.Router();
 const supabase = require('../supabase');
 const { scheduleReminders } = require('../scheduler');
 
+function getTodayInTimezone(timezone) {
+  try {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: timezone || 'Europe/London',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(new Date());
+  } catch (e) {
+    return new Date().toISOString().split('T')[0];
+  }
+}
+
+function calcStreak(completedDates, today) {
+  if (!completedDates.length) return 0;
+  const dateSet = new Set(completedDates);
+  let streak = 0;
+  let check = new Date(today + 'T12:00:00Z');
+  if (!dateSet.has(today)) check.setDate(check.getDate() - 1);
+  while (true) {
+    const d = check.toISOString().split('T')[0];
+    if (dateSet.has(d)) { streak++; check.setDate(check.getDate() - 1); }
+    else break;
+  }
+  return streak;
+}
+
 // GET /api/users/me - get current user settings
 router.get('/me', async (req, res) => {
   try {
@@ -116,6 +141,38 @@ router.post('/reset', async (req, res) => {
       message: 'Program reset successfully',
       user: { ...user, injury_mode: user.injury_mode === true },
     });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/users/leaderboard - streak scoreboard (no emails exposed)
+router.get('/leaderboard', async (req, res) => {
+  try {
+    const { data: users, error } = await supabase
+      .from('users')
+      .select('id, name, timezone');
+    if (error) throw new Error(error.message);
+
+    const entries = await Promise.all(users.map(async (u) => {
+      const today = getTodayInTimezone(u.timezone);
+      const { data: logs } = await supabase
+        .from('workout_logs')
+        .select('date')
+        .eq('user_id', u.id)
+        .eq('status', 'completed')
+        .order('date', { ascending: false });
+      const streak = calcStreak((logs || []).map(l => l.date), today);
+      return { name: u.name || 'Anonymous', streak, isMe: u.id === req.userId };
+    }));
+
+    // Filter out zero-streak users, sort descending
+    const ranked = entries
+      .filter(e => e.streak > 0)
+      .sort((a, b) => b.streak - a.streak);
+
+    res.json(ranked);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });

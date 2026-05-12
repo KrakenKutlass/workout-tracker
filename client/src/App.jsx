@@ -5,6 +5,7 @@ import Workout from './pages/Workout.jsx';
 import Progress from './pages/Progress.jsx';
 import Settings from './pages/Settings.jsx';
 import InfoHub from './pages/InfoHub.jsx';
+import Scoreboard from './pages/Scoreboard.jsx';
 import Login from './pages/Login.jsx';
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 
@@ -32,7 +33,7 @@ const NAV_ITEMS = [
   { to: '/', label: 'Home', icon: HomeIcon },
   { to: '/workout', label: 'Workout', icon: DumbbellIcon },
   { to: '/progress', label: 'Progress', icon: ChartIcon },
-  { to: '/info', label: 'Info Hub', icon: BookIcon },
+  { to: '/scoreboard', label: 'Scores', icon: TrophyIcon },
   { to: '/settings', label: 'Settings', icon: SettingsIcon },
 ];
 
@@ -71,6 +72,18 @@ function BookIcon() {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
       <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/>
       <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
+    </svg>
+  );
+}
+
+function TrophyIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+      <path d="M6 9H4a2 2 0 01-2-2V5h4"/>
+      <path d="M18 9h2a2 2 0 002-2V5h-4"/>
+      <path d="M12 17v4"/>
+      <path d="M8 21h8"/>
+      <path d="M6 3h12v8a6 6 0 01-12 0V3z"/>
     </svg>
   );
 }
@@ -153,6 +166,7 @@ function ProtectedApp() {
           <Route path="/workout/:date" element={<Workout />} />
           <Route path="/progress" element={<Progress />} />
           <Route path="/info" element={<InfoHub />} />
+          <Route path="/scoreboard" element={<Scoreboard />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>
       </div>

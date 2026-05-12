@@ -39,6 +39,7 @@ export default function Login() {
   const [mode, setMode] = useState('signin'); // 'signin' | 'signup'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -63,11 +64,17 @@ export default function Login() {
         if (error) throw error;
         // AuthContext will detect session change and re-render App
       } else {
-        const { error } = await supabase.auth.signUp({ email, password });
+        if (!displayName.trim()) throw new Error('Please enter a display name.');
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { name: displayName.trim() } },
+        });
         if (error) throw error;
         setSuccessMsg('Account created! Check your email to confirm, then sign in.');
         setMode('signin');
         setPassword('');
+        setDisplayName('');
       }
     } catch (err) {
       // Make error messages user-friendly
@@ -148,6 +155,24 @@ export default function Login() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Display name — signup only */}
+            {mode === 'signup' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                  Display Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  autoComplete="nickname"
+                  value={displayName}
+                  onChange={e => setDisplayName(e.target.value)}
+                  placeholder="How you'll appear on the scoreboard"
+                  className="w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 px-3.5 py-2.5 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow"
+                />
+              </div>
+            )}
+
             {/* Email */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">

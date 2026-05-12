@@ -23,7 +23,7 @@ module.exports = async function authMiddleware(req, res, next) {
       .from('users')
       .insert({
         auth_id: user.id,
-        name: user.email.split('@')[0],
+        name: user.user_metadata?.name || user.email.split('@')[0],
         email: user.email,
         phone: '',
         start_date: new Date().toISOString().split('T')[0],

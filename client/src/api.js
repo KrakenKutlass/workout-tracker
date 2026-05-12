@@ -52,6 +52,7 @@ export const usersApi = {
   }),
   resetProgram: () => request('/users/reset', { method: 'POST' }),
   deleteAccount: () => request('/users/me', { method: 'DELETE' }),
+  getLeaderboard: () => request('/users/leaderboard'),
 };
 
 // Notifications API
