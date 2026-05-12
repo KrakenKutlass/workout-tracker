@@ -201,13 +201,19 @@ router.get('/progress', async (req, res) => {
 
     const streak = await calculateStreak(req.userId, today);
 
+    const { count: missedCount } = await supabase
+      .from('workout_logs')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', req.userId)
+      .eq('status', 'missed');
+
     res.json({
       grid,
       currentDayIndex: completedCount,
       currentWeek: Math.min(Math.floor(completedCount / 7) + 1, 12),
       streak,
       completedCount,
-      missedCount: 0,
+      missedCount: missedCount || 0,
       totalDays: completedCount + 1,
     });
   } catch (err) {

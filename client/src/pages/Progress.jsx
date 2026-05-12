@@ -31,9 +31,7 @@ export default function Progress() {
   if (error) return <ErrorMessage error={error} onRetry={load} />;
   if (!data) return null;
 
-  const completionRate = data.totalDays > 0
-    ? Math.round((data.completedCount / data.totalDays) * 100)
-    : 0;
+  const overallPct = Math.round((data.completedCount / 84) * 100);
 
   return (
     <div className="px-4 pt-6 pb-4 space-y-5">
@@ -46,22 +44,22 @@ export default function Progress() {
       {/* Stats row */}
       <div className="grid grid-cols-2 gap-3">
         <div className="card">
-          <p className="text-3xl font-bold text-green-600">{data.completedCount}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Workouts Completed</p>
-          <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+          <p className="text-3xl font-bold text-green-600">{data.completedCount}<span className="text-base font-normal text-gray-400 dark:text-gray-500">/84</span></p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Workouts Done</p>
+          <div className="mt-2 h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
             <div
-              className="h-full bg-green-500 rounded-full"
-              style={{ width: `${completionRate}%` }}
+              className="h-full bg-green-500 rounded-full transition-all duration-500"
+              style={{ width: `${overallPct}%` }}
             />
           </div>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{completionRate}% completion rate</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{overallPct}% of programme</p>
         </div>
         <div className="card">
           <p className="text-3xl font-bold text-red-500">{data.missedCount}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Missed Days</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Skipped Days</p>
           <div className="mt-2">
             <p className="text-xs text-gray-400 dark:text-gray-500">
-              {data.totalDays} days into program
+              {data.missedCount === 0 ? 'No missed sessions 🎉' : 'Days the streak broke'}
             </p>
           </div>
         </div>
@@ -107,11 +105,14 @@ export default function Progress() {
         <p className="text-xs opacity-60 mt-1.5">Day {Math.min(data.currentDayIndex + 1, 84)} of 84</p>
       </div>
 
-      {/* 12-week grid */}
+      {/* 84-workout grid */}
       <div className="card">
-        <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">
-          12-Week Overview
-        </h2>
+        <div className="flex items-baseline justify-between mb-4">
+          <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+            84-Workout Programme
+          </h2>
+          <span className="text-xs text-gray-400 dark:text-gray-500">12 blocks · 7 each</span>
+        </div>
         <ProgressGrid grid={data.grid} currentWeek={data.currentWeek} />
       </div>
 
