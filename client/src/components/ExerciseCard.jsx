@@ -52,7 +52,7 @@ function TimerDisplay({ seconds, isActive, onComplete }) {
   );
 }
 
-export default function ExerciseCard({ exercise, completed, onToggle, index, isCircuit = false }) {
+export default function ExerciseCard({ exercise, completed, onToggle, index, isCircuit = false, disabled = false }) {
   const [timerActive, setTimerActive] = useState(false);
   const [timerDone, setTimerDone] = useState(false);
   const [showCues, setShowCues] = useState(false);
@@ -123,27 +123,47 @@ export default function ExerciseCard({ exercise, completed, onToggle, index, isC
           {/* Description */}
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed">{exercise.description}</p>
 
-          {/* Cues toggle */}
-          {exercise.cues && exercise.cues.length > 0 && (
+          {/* Cues + how-to toggle */}
+          {(exercise.howTo || (exercise.cues && exercise.cues.length > 0)) && (
             <div className="mt-2">
               <button
                 onClick={() => setShowCues(v => !v)}
-                className="text-xs text-brand-600 dark:text-brand-400 font-medium flex items-center gap-1 hover:text-brand-700"
+                className="text-xs text-brand-600 dark:text-brand-400 font-medium flex items-center gap-1 hover:text-brand-700 dark:hover:text-brand-300"
               >
                 <svg viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
                   <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 13A6 6 0 118 2a6 6 0 010 12zm-.75-4.5v-3h1.5v3h-1.5zm0-4.5v-1.5h1.5V5h-1.5z"/>
                 </svg>
-                {showCues ? 'Hide cues' : 'Show form cues'}
+                {showCues ? 'Hide instructions' : 'How to do this'}
               </button>
               {showCues && (
-                <ul className="mt-1.5 space-y-1">
-                  {exercise.cues.map((cue, i) => (
-                    <li key={i} className="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1.5">
-                      <span className="text-brand-400 mt-0.5">▸</span>
-                      {cue}
-                    </li>
-                  ))}
-                </ul>
+                <div className="mt-2 space-y-3">
+                  {exercise.howTo && exercise.howTo.length > 0 && (
+                    <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3">
+                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">How to do it</p>
+                      <ol className="space-y-2">
+                        {exercise.howTo.map((step, i) => (
+                          <li key={i} className="text-xs text-gray-700 dark:text-gray-300 flex gap-2">
+                            <span className="flex-shrink-0 w-4 h-4 rounded-full bg-brand-100 dark:bg-brand-900/50 text-brand-700 dark:text-brand-300 flex items-center justify-center font-bold text-[10px] mt-0.5">{i + 1}</span>
+                            <span className="leading-relaxed">{step}</span>
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
+                  {exercise.cues && exercise.cues.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Form reminders</p>
+                      <ul className="space-y-1">
+                        {exercise.cues.map((cue, i) => (
+                          <li key={i} className="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1.5">
+                            <span className="text-brand-400 mt-0.5 flex-shrink-0">▸</span>
+                            {cue}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           )}
