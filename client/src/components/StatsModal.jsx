@@ -1,14 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
-export default function StatsModal({ isOpen, onClose, onSubmit, loading }) {
+export default function StatsModal({ isOpen, onClose, onSubmit, loading, initialFeeling = null }) {
   const [form, setForm] = useState({
     heart_rate_peak: '',
     heart_rate_avg: '',
     rpe: null,
     duration_minutes: '',
-    feeling: null,
+    feeling: initialFeeling,
     notes: '',
   });
+
+  useEffect(() => {
+    if (isOpen) {
+      setForm(prev => ({ ...prev, feeling: initialFeeling }));
+    }
+  }, [isOpen, initialFeeling]);
 
   if (!isOpen) return null;
 

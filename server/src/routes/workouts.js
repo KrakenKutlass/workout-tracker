@@ -373,8 +373,8 @@ router.post('/complete/:date', async (req, res) => {
       return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
     }
 
-    const { heart_rate_peak, heart_rate_avg, rpe, duration_minutes, notes } = req.body;
-    const stats = { heart_rate_peak, heart_rate_avg, rpe, duration_minutes, notes };
+    const { heart_rate_peak, heart_rate_avg, rpe, duration_minutes, feeling, notes } = req.body;
+    const incomingStats = { heart_rate_peak, heart_rate_avg, rpe, duration_minutes, feeling, notes };
 
     const { data: existingLog, error: existingError } = await supabase
       .from('workout_logs')
@@ -403,13 +403,14 @@ router.post('/complete/:date', async (req, res) => {
           workout_type: workoutType,
           status: 'completed',
           completed_exercises: [],
-          stats,
+          stats: incomingStats,
         });
       if (insertError) throw new Error(insertError.message);
     } else {
+      const merged = { ...(existingLog.stats || {}), ...incomingStats };
       const { error: updateError } = await supabase
         .from('workout_logs')
-        .update({ status: 'completed', stats })
+        .update({ status: 'completed', stats: merged })
         .eq('user_id', req.userId)
         .eq('date', date);
       if (updateError) throw new Error(updateError.message);

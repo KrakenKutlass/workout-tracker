@@ -219,6 +219,7 @@ export default function Workout() {
         onClose={() => { setShowStatsModal(false); autoTriggered.current = false; }}
         onSubmit={handleStatsSubmit}
         loading={completing}
+        initialFeeling={data?.log?.stats?.feeling ?? null}
       />
 
       {/* Header */}
