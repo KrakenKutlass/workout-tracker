@@ -45,7 +45,7 @@ function TimerDisplay({ seconds, isActive, onComplete }) {
           />
         </svg>
         <span className={`absolute inset-0 flex items-center justify-center text-sm font-bold ${remaining === 0 ? 'text-green-600' : isActive ? 'text-brand-600 timer-active' : 'text-gray-700 dark:text-gray-100'}`}>
-          {remaining === 0 ? '✓' : `${remaining}s`}
+          {remaining === 0 ? '✓' : remaining >= 60 ? `${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, '0')}` : `${remaining}s`}
         </span>
       </div>
     </div>
