@@ -222,6 +222,35 @@ router.get('/progress', async (req, res) => {
   }
 });
 
+// GET /api/workouts/history - all completed logs with stats, for charts
+router.get('/history', async (req, res) => {
+  try {
+    const { data: logs, error } = await supabase
+      .from('workout_logs')
+      .select('date, workout_type, stats, completed_exercises')
+      .eq('user_id', req.userId)
+      .eq('status', 'completed')
+      .order('date', { ascending: true });
+    if (error) throw new Error(error.message);
+
+    res.json((logs || []).map((l, i) => ({
+      workoutNumber: i + 1,
+      date: l.date,
+      workoutType: l.workout_type,
+      exercisesCompleted: (l.completed_exercises || []).length,
+      rpe: l.stats?.rpe ?? null,
+      hrPeak: l.stats?.heart_rate_peak ?? null,
+      hrAvg: l.stats?.heart_rate_avg ?? null,
+      duration: l.stats?.duration_minutes ?? null,
+      feeling: l.stats?.feeling ?? null,
+      notes: l.stats?.notes ?? null,
+    })));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /api/workouts/:date - get workout for a specific date
 router.get('/:date', async (req, res) => {
   try {
@@ -535,35 +564,6 @@ router.patch('/log/:date/stats', async (req, res) => {
     if (updateError) throw new Error(updateError.message);
 
     res.json({ stats: merged });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// GET /api/workouts/history - all completed logs with stats, for charts
-router.get('/history', async (req, res) => {
-  try {
-    const { data: logs, error } = await supabase
-      .from('workout_logs')
-      .select('date, workout_type, stats, completed_exercises')
-      .eq('user_id', req.userId)
-      .eq('status', 'completed')
-      .order('date', { ascending: true });
-    if (error) throw new Error(error.message);
-
-    res.json((logs || []).map((l, i) => ({
-      workoutNumber: i + 1,
-      date: l.date,
-      workoutType: l.workout_type,
-      exercisesCompleted: (l.completed_exercises || []).length,
-      rpe: l.stats?.rpe ?? null,
-      hrPeak: l.stats?.heart_rate_peak ?? null,
-      hrAvg: l.stats?.heart_rate_avg ?? null,
-      duration: l.stats?.duration_minutes ?? null,
-      feeling: l.stats?.feeling ?? null,
-      notes: l.stats?.notes ?? null,
-    })));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
