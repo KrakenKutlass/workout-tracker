@@ -55,6 +55,7 @@ function TimerDisplay({ seconds, isActive, onComplete }) {
 export default function ExerciseCard({ exercise, completed, onToggle, index, isCircuit = false, disabled = false }) {
   const [timerActive, setTimerActive] = useState(false);
   const [timerDone, setTimerDone] = useState(false);
+  const [timerKey, setTimerKey] = useState(0);
   const [showCues, setShowCues] = useState(false);
 
   const isTimeBased = exercise.type === 'time';
@@ -64,17 +65,17 @@ export default function ExerciseCard({ exercise, completed, onToggle, index, isC
     setTimerActive(false);
   };
 
+  const handleTimerRestart = () => {
+    setTimerDone(false);
+    setTimerActive(false);
+    setTimerKey(k => k + 1);
+  };
+
   const handleMainAction = () => {
+    onToggle(exercise.id, !completed);
     if (isTimeBased) {
-      if (!timerActive && !timerDone) {
-        setTimerActive(true);
-      } else if (timerDone || timerActive) {
-        onToggle(exercise.id, !completed);
-        setTimerActive(false);
-        setTimerDone(false);
-      }
-    } else {
-      onToggle(exercise.id, !completed);
+      setTimerActive(false);
+      setTimerDone(false);
     }
   };
 
@@ -112,7 +113,7 @@ export default function ExerciseCard({ exercise, completed, onToggle, index, isC
             {/* Timer for time-based exercises */}
             {isTimeBased && !completed && (
               <TimerDisplay
-                key={exercise.durationSeconds}
+                key={timerKey}
                 seconds={exercise.durationSeconds}
                 isActive={timerActive}
                 onComplete={handleTimerComplete}
@@ -188,12 +189,15 @@ export default function ExerciseCard({ exercise, completed, onToggle, index, isC
                 </button>
               )}
               {timerDone && (
-                <button
-                  onClick={() => onToggle(exercise.id, true)}
-                  className="text-xs bg-green-600 text-white px-3 py-1 rounded-full font-medium hover:bg-green-700 transition-colors"
-                >
-                  Mark Complete ✓
-                </button>
+                <>
+                  <span className="text-xs text-green-600 dark:text-green-400 font-medium py-1">Done!</span>
+                  <button
+                    onClick={handleTimerRestart}
+                    className="text-xs bg-brand-600 text-white px-3 py-1 rounded-full font-medium hover:bg-brand-700 transition-colors"
+                  >
+                    Start Again
+                  </button>
+                </>
               )}
             </div>
           )}
