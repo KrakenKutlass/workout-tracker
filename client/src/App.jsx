@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, NavLink, useLocation } from 'react-router
 import Home from './pages/Home.jsx';
 import Workout from './pages/Workout.jsx';
 import Progress from './pages/Progress.jsx';
+import WorkoutHistory from './pages/WorkoutHistory.jsx';
 import Settings from './pages/Settings.jsx';
 import InfoHub from './pages/InfoHub.jsx';
 import Scoreboard from './pages/Scoreboard.jsx';
@@ -33,9 +34,18 @@ const NAV_ITEMS = [
   { to: '/', label: 'Home', icon: HomeIcon },
   { to: '/workout', label: 'Workout', icon: DumbbellIcon },
   { to: '/progress', label: 'Progress', icon: ChartIcon },
+  { to: '/stats', label: 'Stats', icon: HistoryIcon },
   { to: '/scoreboard', label: 'Scores', icon: TrophyIcon },
   { to: '/settings', label: 'Settings', icon: SettingsIcon },
 ];
+
+function HistoryIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+    </svg>
+  );
+}
 
 function HomeIcon() {
   return (
@@ -165,6 +175,7 @@ function ProtectedApp() {
           <Route path="/workout" element={<Workout />} />
           <Route path="/workout/:date" element={<Workout />} />
           <Route path="/progress" element={<Progress />} />
+          <Route path="/stats" element={<WorkoutHistory />} />
           <Route path="/info" element={<InfoHub />} />
           <Route path="/scoreboard" element={<Scoreboard />} />
           <Route path="/settings" element={<Settings />} />

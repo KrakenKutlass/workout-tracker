@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { workoutsApi } from '../api.js';
 import ExerciseCard from '../components/ExerciseCard.jsx';
@@ -22,6 +22,7 @@ export default function Workout() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [completing, setCompleting] = useState(false);
+  const [savingFeeling, setSavingFeeling] = useState(false);
   const autoTriggered = React.useRef(false);
 
   // Use server-supplied date (timezone-aware) once loaded; fall back to URL param or UTC
@@ -142,6 +143,21 @@ export default function Workout() {
 
     autoTriggered.current = true;
     setShowStatsModal(true);
+  };
+
+  const handleFeelingSelect = async (value) => {
+    if (!data || savingFeeling) return;
+    const current = data.log?.stats?.feeling;
+    const next = current === value ? null : value;
+    setData(prev => ({ ...prev, log: { ...prev.log, stats: { ...(prev.log?.stats || {}), feeling: next } } }));
+    setSavingFeeling(true);
+    try {
+      await workoutsApi.updateStats(targetDate, { feeling: next });
+    } catch (err) {
+      console.error('Error saving feeling:', err);
+    } finally {
+      setSavingFeeling(false);
+    }
   };
 
   const handleStatsSubmit = async (stats) => {
@@ -348,20 +364,39 @@ export default function Workout() {
           ))}
         </div>
 
-        {/* Notes area */}
+        {/* Feeling rating */}
         {(isToday || isPast) && log?.status !== 'not_started' && (
           <div className="card">
-            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">How did it feel?</p>
+            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+              How did it feel?
+            </p>
             <div className="flex gap-2 flex-wrap">
-              {['💪 Strong', '😤 Tough', '😅 Hard', '🔥 Crushed it'].map(label => (
-                <button
-                  key={label}
-                  className="text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-2.5 py-1.5 rounded-full transition-colors"
-                >
-                  {label}
-                </button>
-              ))}
+              {[
+                { value: 'strong',  label: '💪 Strong' },
+                { value: 'tough',   label: '😤 Tough' },
+                { value: 'hard',    label: '😅 Hard' },
+                { value: 'crushed', label: '🔥 Crushed it' },
+              ].map(({ value, label }) => {
+                const selected = log?.stats?.feeling === value;
+                return (
+                  <button
+                    key={value}
+                    onClick={() => handleFeelingSelect(value)}
+                    disabled={savingFeeling}
+                    className={`text-sm px-3 py-1.5 rounded-full border-2 font-medium transition-all duration-150 disabled:opacity-60 ${
+                      selected
+                        ? 'bg-brand-600 border-brand-600 text-white'
+                        : 'bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-brand-400'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
             </div>
+            {log?.stats?.feeling && (
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">Saved ✓  — tap again to clear</p>
+            )}
           </div>
         )}
       </div>

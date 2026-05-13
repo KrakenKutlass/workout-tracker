@@ -41,6 +41,11 @@ export const workoutsApi = {
     method: 'POST',
     body: JSON.stringify(stats),
   }),
+  updateStats: (date, stats) => request(`/workouts/log/${date}/stats`, {
+    method: 'PATCH',
+    body: JSON.stringify(stats),
+  }),
+  getHistory: () => request('/workouts/history'),
 };
 
 // Users API

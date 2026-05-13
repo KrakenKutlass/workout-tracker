@@ -508,4 +508,66 @@ async function calculateStreak(userId, today) {
   return streak;
 }
 
+// PATCH /api/workouts/log/:date/stats - update stats (feeling, HR, RPE, etc.) on an existing log
+router.patch('/log/:date/stats', async (req, res) => {
+  try {
+    const { date } = req.params;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
+    }
+
+    const { data: log, error: logError } = await supabase
+      .from('workout_logs')
+      .select('stats')
+      .eq('user_id', req.userId)
+      .eq('date', date)
+      .maybeSingle();
+    if (logError) throw new Error(logError.message);
+    if (!log) return res.status(404).json({ error: 'Workout log not found for this date' });
+
+    const merged = { ...(log.stats || {}), ...req.body };
+
+    const { error: updateError } = await supabase
+      .from('workout_logs')
+      .update({ stats: merged })
+      .eq('user_id', req.userId)
+      .eq('date', date);
+    if (updateError) throw new Error(updateError.message);
+
+    res.json({ stats: merged });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/workouts/history - all completed logs with stats, for charts
+router.get('/history', async (req, res) => {
+  try {
+    const { data: logs, error } = await supabase
+      .from('workout_logs')
+      .select('date, workout_type, stats, completed_exercises')
+      .eq('user_id', req.userId)
+      .eq('status', 'completed')
+      .order('date', { ascending: true });
+    if (error) throw new Error(error.message);
+
+    res.json((logs || []).map((l, i) => ({
+      workoutNumber: i + 1,
+      date: l.date,
+      workoutType: l.workout_type,
+      exercisesCompleted: (l.completed_exercises || []).length,
+      rpe: l.stats?.rpe ?? null,
+      hrPeak: l.stats?.heart_rate_peak ?? null,
+      hrAvg: l.stats?.heart_rate_avg ?? null,
+      duration: l.stats?.duration_minutes ?? null,
+      feeling: l.stats?.feeling ?? null,
+      notes: l.stats?.notes ?? null,
+    })));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

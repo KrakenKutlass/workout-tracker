@@ -6,6 +6,7 @@ export default function StatsModal({ isOpen, onClose, onSubmit, loading }) {
     heart_rate_avg: '',
     rpe: null,
     duration_minutes: '',
+    feeling: null,
     notes: '',
   });
 
@@ -18,6 +19,7 @@ export default function StatsModal({ isOpen, onClose, onSubmit, loading }) {
       heart_rate_avg: form.heart_rate_avg ? Number(form.heart_rate_avg) : undefined,
       rpe: form.rpe || undefined,
       duration_minutes: form.duration_minutes ? Number(form.duration_minutes) : undefined,
+      feeling: form.feeling || undefined,
       notes: form.notes || undefined,
     });
   };
@@ -105,6 +107,32 @@ export default function StatsModal({ isOpen, onClose, onSubmit, loading }) {
               value={form.duration_minutes}
               onChange={e => setForm(prev => ({ ...prev, duration_minutes: e.target.value }))}
             />
+          </div>
+
+          {/* Feeling */}
+          <div>
+            <label className="label">How did it feel?</label>
+            <div className="flex gap-2 flex-wrap">
+              {[
+                { value: 'strong',  label: '💪 Strong' },
+                { value: 'tough',   label: '😤 Tough' },
+                { value: 'hard',    label: '😅 Hard' },
+                { value: 'crushed', label: '🔥 Crushed it' },
+              ].map(({ value, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setForm(prev => ({ ...prev, feeling: prev.feeling === value ? null : value }))}
+                  className={`text-sm px-3 py-1.5 rounded-full border-2 transition-all duration-150 font-medium ${
+                    form.feeling === value
+                      ? 'bg-brand-600 border-brand-600 text-white'
+                      : 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-brand-400'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Notes */}
