@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const supabase = require('../supabase');
-const { sendWorkoutReminder, sendEmail, sendSMS } = require('../notifications');
+const { sendWorkoutReminder, sendEmail } = require('../notifications');
 const { getWorkoutTypeForDay, getWeekNumber } = require('../workoutData');
 const { checkAndNotifyUser } = require('../scheduler');
 
@@ -18,17 +18,10 @@ function getDayIndex(startDate) {
 router.get('/config-status', (req, res) => {
   const emailUser = process.env.NODEMAILER_USER;
   const emailPass = process.env.NODEMAILER_PASS;
-  const twilioSid = process.env.TWILIO_ACCOUNT_SID;
-  const twilioToken = process.env.TWILIO_AUTH_TOKEN;
-  const twilioFrom = process.env.TWILIO_FROM;
 
   const emailConfigured = !!(emailUser && emailPass &&
     emailUser !== 'placeholder@gmail.com' &&
     emailPass !== 'placeholder_password');
-
-  const smsConfigured = !!(twilioSid && twilioToken && twilioFrom &&
-    !twilioSid.startsWith('ACplaceholder') &&
-    twilioToken !== 'placeholder_auth_token_00000000000000');
 
   res.json({
     email: {
@@ -36,14 +29,6 @@ router.get('/config-status', (req, res) => {
       missing: emailConfigured ? [] : [
         !emailUser || emailUser === 'placeholder@gmail.com' ? 'NODEMAILER_USER' : null,
         !emailPass || emailPass === 'placeholder_password' ? 'NODEMAILER_PASS' : null,
-      ].filter(Boolean),
-    },
-    sms: {
-      configured: smsConfigured,
-      missing: smsConfigured ? [] : [
-        !twilioSid || twilioSid.startsWith('ACplaceholder') ? 'TWILIO_ACCOUNT_SID' : null,
-        !twilioToken || twilioToken === 'placeholder_auth_token_00000000000000' ? 'TWILIO_AUTH_TOKEN' : null,
-        !twilioFrom || twilioFrom === '+15005550006' ? 'TWILIO_FROM' : null,
       ].filter(Boolean),
     },
   });
@@ -78,25 +63,14 @@ router.post('/test', async (req, res) => {
     if (userError) throw new Error(userError.message);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    const results = {};
+    const result = await sendEmail({
+      to: user.email,
+      subject: 'Kraken2Shape - Test Notification',
+      text: 'This is a test notification from Kraken2Shape. Your notifications are configured correctly!',
+      html: '<p>This is a test notification from <strong>Kraken2Shape</strong>. Your notifications are configured correctly!</p>',
+    });
 
-    if (type === 'email' || type === 'both' || !type) {
-      results.email = await sendEmail({
-        to: user.email,
-        subject: 'Kraken2Shape - Test Notification',
-        text: 'This is a test notification from Kraken2Shape. Your notifications are configured correctly!',
-        html: '<p>This is a test notification from <strong>Kraken2Shape</strong>. Your notifications are configured correctly!</p>',
-      });
-    }
-
-    if (type === 'sms' || type === 'both') {
-      results.sms = await sendSMS({
-        to: user.phone,
-        body: 'Kraken2Shape: Test notification. Your SMS reminders are working!',
-      });
-    }
-
-    res.json({ message: 'Test notification sent', results });
+    res.json({ message: 'Test notification sent', result });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
@@ -140,19 +114,12 @@ router.post('/reminder', async (req, res) => {
 
     const result = await sendWorkoutReminder(user, workoutType, weekNumber);
 
-    // Log it
-    const today = new Date().toISOString().split('T')[0];
-    if (result.email && result.email.success) {
-      const { error: emailLogError } = await supabase
+    if (result.success) {
+      const today = new Date().toISOString().split('T')[0];
+      const { error: logError } = await supabase
         .from('notification_logs')
         .insert({ user_id: user.id, date: today, type: 'email' });
-      if (emailLogError) throw new Error(emailLogError.message);
-    }
-    if (result.sms && result.sms.success) {
-      const { error: smsLogError } = await supabase
-        .from('notification_logs')
-        .insert({ user_id: user.id, date: today, type: 'sms' });
-      if (smsLogError) throw new Error(smsLogError.message);
+      if (logError) throw new Error(logError.message);
     }
 
     res.json({ message: 'Reminder sent', result });

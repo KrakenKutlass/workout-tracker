@@ -87,11 +87,8 @@ async function checkAndNotifyUser(user) {
 
   const result = await sendWorkoutReminder(user, workoutType, weekNumber);
 
-  if (result.email?.success) {
+  if (result.success) {
     await supabase.from('notification_logs').insert({ user_id: user.id, date: today, type: 'email' });
-  }
-  if (result.sms?.success) {
-    await supabase.from('notification_logs').insert({ user_id: user.id, date: today, type: 'sms' });
   }
 
   return result;

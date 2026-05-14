@@ -1,28 +1,6 @@
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 
-let twilioClient = null;
-
-// Initialize Twilio client lazily to handle missing credentials gracefully
-function getTwilioClient() {
-  if (twilioClient) return twilioClient;
-  const sid = process.env.TWILIO_ACCOUNT_SID;
-  const token = process.env.TWILIO_AUTH_TOKEN;
-  if (
-    sid && token &&
-    !sid.startsWith('ACplaceholder') &&
-    token !== 'placeholder_auth_token_00000000000000'
-  ) {
-    try {
-      twilioClient = require('twilio')(sid, token);
-    } catch (err) {
-      console.warn('Twilio initialization failed:', err.message);
-    }
-  }
-  return twilioClient;
-}
-
-// Create Nodemailer transporter
 function getTransporter() {
   const user = process.env.NODEMAILER_USER;
   const pass = process.env.NODEMAILER_PASS;
@@ -63,31 +41,11 @@ async function sendEmail({ to, subject, html, text }) {
   }
 }
 
-async function sendSMS({ to, body }) {
-  const client = getTwilioClient();
-  if (!client) {
-    console.log('[SMS] Skipped - credentials not configured');
-    return { success: false, reason: 'credentials_not_configured' };
-  }
-  try {
-    const message = await client.messages.create({
-      body,
-      from: process.env.TWILIO_FROM,
-      to,
-    });
-    console.log('[SMS] Sent:', message.sid);
-    return { success: true, sid: message.sid };
-  } catch (err) {
-    console.error('[SMS] Send failed:', err.message);
-    return { success: false, reason: err.message };
-  }
-}
-
 async function sendWorkoutReminder(user, workoutType, weekNumber) {
   const workoutNames = { A: 'Upper Body + Core', B: 'Lower Body + Rehab', C: 'Full Body Conditioning' };
   const workoutName = workoutNames[workoutType] || workoutType;
-
   const appUrl = process.env.APP_URL || 'http://squidslab.utopian.it:3004';
+
   const subject = `Kraken2Shape: Workout ${workoutType} reminder`;
   const bodyText = `Hey ${user.name},\n\nYou haven't completed your workout today!\n\nToday's workout: ${workoutName} (Workout ${workoutType}) - Week ${weekNumber}\n\nOpen the app to get started: ${appUrl}\n\nStay consistent!\nKraken2Shape`;
   const bodyHtml = `
@@ -110,17 +68,7 @@ async function sendWorkoutReminder(user, workoutType, weekNumber) {
     </div>
   `;
 
-  const emailResult = await sendEmail({
-    to: user.email,
-    subject,
-    html: bodyHtml,
-    text: bodyText,
-  });
-
-  const smsBody = `Kraken2Shape: Hey ${user.name}, don't forget your Workout ${workoutType} today (${workoutName}, Week ${weekNumber}). Keep the streak going! ${appUrl}`;
-  const smsResult = await sendSMS({ to: user.phone, body: smsBody });
-
-  return { email: emailResult, sms: smsResult };
+  return await sendEmail({ to: user.email, subject, html: bodyHtml, text: bodyText });
 }
 
-module.exports = { sendEmail, sendSMS, sendWorkoutReminder };
+module.exports = { sendEmail, sendWorkoutReminder };
