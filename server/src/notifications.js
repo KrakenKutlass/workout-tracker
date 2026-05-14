@@ -87,8 +87,9 @@ async function sendWorkoutReminder(user, workoutType, weekNumber) {
   const workoutNames = { A: 'Upper Body + Core', B: 'Lower Body + Rehab', C: 'Full Body Conditioning' };
   const workoutName = workoutNames[workoutType] || workoutType;
 
+  const appUrl = process.env.APP_URL || 'http://squidslab.utopian.it:3004';
   const subject = `Kraken2Shape: Workout ${workoutType} reminder`;
-  const bodyText = `Hey ${user.name},\n\nYou haven't completed your workout today!\n\nToday's workout: ${workoutName} (Workout ${workoutType}) - Week ${weekNumber}\n\nOpen the app to get started: http://localhost:5173\n\nStay consistent!\nKraken2Shape`;
+  const bodyText = `Hey ${user.name},\n\nYou haven't completed your workout today!\n\nToday's workout: ${workoutName} (Workout ${workoutType}) - Week ${weekNumber}\n\nOpen the app to get started: ${appUrl}\n\nStay consistent!\nKraken2Shape`;
   const bodyHtml = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 12px 12px 0 0;">
@@ -103,7 +104,7 @@ async function sendWorkoutReminder(user, workoutType, weekNumber) {
           <p style="margin: 8px 0 0; font-size: 22px; font-weight: bold; color: #333;">${workoutName}</p>
           <p style="margin: 4px 0 0; color: #667eea; font-weight: 600;">Workout ${workoutType} &bull; Week ${weekNumber}</p>
         </div>
-        <a href="http://localhost:5173" style="display: inline-block; background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">Start Workout Now</a>
+        <a href="${appUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">Start Workout Now</a>
         <p style="margin-top: 30px; color: #888; font-size: 14px;">Stay consistent - Kraken2Shape</p>
       </div>
     </div>
@@ -116,7 +117,7 @@ async function sendWorkoutReminder(user, workoutType, weekNumber) {
     text: bodyText,
   });
 
-  const smsBody = `Kraken2Shape: Hey ${user.name}, don't forget your Workout ${workoutType} today (${workoutName}, Week ${weekNumber}). Keep the streak going! http://localhost:5173`;
+  const smsBody = `Kraken2Shape: Hey ${user.name}, don't forget your Workout ${workoutType} today (${workoutName}, Week ${weekNumber}). Keep the streak going! ${appUrl}`;
   const smsResult = await sendSMS({ to: user.phone, body: smsBody });
 
   return { email: emailResult, sms: smsResult };
