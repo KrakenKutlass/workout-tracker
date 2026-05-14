@@ -27,7 +27,7 @@ async function sendEmail({ to, subject, html, text }) {
   }
   try {
     const info = await transporter.sendMail({
-      from: process.env.EMAIL_FROM || 'noreply@kraken2shape.app',
+      from: process.env.EMAIL_FROM || process.env.NODEMAILER_USER,
       to,
       subject,
       html,
