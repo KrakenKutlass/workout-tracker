@@ -43,7 +43,6 @@ export default function Settings() {
   const [form, setForm] = useState({
     name: '',
     email: '',
-    phone: '',
     reminder_time: '20:00',
     injury_mode: false,
     start_date: '',
@@ -63,7 +62,6 @@ export default function Settings() {
       setForm({
         name: userData.name || '',
         email: userData.email || '',
-        phone: userData.phone || '',
         reminder_time: userData.reminder_time || '20:00',
         injury_mode: userData.injury_mode || false,
         start_date: userData.start_date || '',
@@ -110,25 +108,14 @@ export default function Settings() {
     }
   };
 
-  const handleTestNotification = async (type) => {
+  const handleTestNotification = async () => {
     setTestingNotif(true);
     try {
-      const result = await notificationsApi.sendTest(type);
-      const emailResult = result.results?.email;
-      const smsResult = result.results?.sms;
-      const msgs = [];
-      if (type !== 'sms') {
-        if (emailResult?.success) msgs.push('✓ Email sent');
-        else if (emailResult?.reason === 'credentials_not_configured') msgs.push('✗ Email: NODEMAILER_USER / NODEMAILER_PASS not set in .env');
-        else msgs.push(`✗ Email failed: ${emailResult?.reason || 'unknown error'}`);
-      }
-      if (type !== 'email') {
-        if (smsResult?.success) msgs.push('✓ SMS sent');
-        else if (smsResult?.reason === 'credentials_not_configured') msgs.push('✗ SMS: TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN not set in .env');
-        else msgs.push(`✗ SMS failed: ${smsResult?.reason || 'unknown error'}`);
-      }
-      const anyOk = emailResult?.success || smsResult?.success;
-      setSaveMsg({ type: anyOk ? 'success' : 'error', text: msgs.join(' · ') });
+      const result = await notificationsApi.sendTest('email');
+      const msg = result.result?.success
+        ? '✓ Email sent successfully'
+        : `✗ Email failed: ${result.result?.reason || 'unknown error'}`;
+      setSaveMsg({ type: result.result?.success ? 'success' : 'error', text: msg });
       await load();
     } catch (err) {
       setSaveMsg({ type: 'error', text: err.message });
@@ -245,16 +232,7 @@ export default function Settings() {
                 placeholder="your@email.com"
               />
             </div>
-            <div>
-              <label className="label">Phone (for SMS reminders)</label>
-              <input
-                type="tel"
-                className="input"
-                value={form.phone}
-                onChange={e => setForm(prev => ({ ...prev, phone: e.target.value }))}
-                placeholder="+44xxxxxxxxxx"
-              />
-            </div>
+
           </div>
         </div>
 
@@ -321,7 +299,7 @@ export default function Settings() {
                 onChange={e => setForm(prev => ({ ...prev, reminder_time: e.target.value }))}
               />
               <p className="text-xs text-gray-400 mt-1">
-                You'll receive an email + SMS if workout not completed by this time. Max 2 reminders per day.
+                You'll receive an email reminder if your workout isn't completed by this time. Max 2 per day.
               </p>
             </div>
           </div>
@@ -342,38 +320,24 @@ export default function Settings() {
 
         {/* Credential status */}
         {notifConfig && (
-          <div className="mb-3 space-y-1.5">
+          <div className="mb-3">
             <div className="flex items-center gap-2 text-sm">
               <span className={`w-2 h-2 rounded-full flex-shrink-0 ${notifConfig.email.configured ? 'bg-green-500' : 'bg-red-400'}`}/>
               <span className={notifConfig.email.configured ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
                 Email (SMTP): {notifConfig.email.configured ? 'Configured' : `Missing: ${notifConfig.email.missing.join(', ')}`}
               </span>
             </div>
-            <div className="flex items-center gap-2 text-sm">
-              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${notifConfig.sms.configured ? 'bg-green-500' : 'bg-red-400'}`}/>
-              <span className={notifConfig.sms.configured ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
-                SMS (Twilio): {notifConfig.sms.configured ? 'Configured' : `Missing: ${notifConfig.sms.missing.join(', ')}`}
-              </span>
-            </div>
-            {(!notifConfig.email.configured || !notifConfig.sms.configured) && (
+            {!notifConfig.email.configured && (
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Add these to your <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">.env</code> file and redeploy.
+                Add these to your <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">.env</code> file and restart the server.
               </p>
             )}
           </div>
         )}
 
-        <div className="flex flex-wrap gap-2">
-          <button onClick={() => handleTestNotification('email')} disabled={testingNotif} className="btn-secondary py-2 text-sm">
-            Test Email
-          </button>
-          <button onClick={() => handleTestNotification('sms')} disabled={testingNotif} className="btn-secondary py-2 text-sm">
-            Test SMS
-          </button>
-          <button onClick={() => handleTestNotification('both')} disabled={testingNotif} className="btn-primary py-2 text-sm">
-            {testingNotif ? 'Sending...' : 'Test Both'}
-          </button>
-        </div>
+        <button onClick={handleTestNotification} disabled={testingNotif} className="btn-primary py-2 text-sm">
+          {testingNotif ? 'Sending...' : 'Send Test Email'}
+        </button>
       </div>
 
       {/* Notification logs */}
